@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="Mocha Tests" time="0.019" tests="1" failures="0">
+  <testsuite name="Root Suite" timestamp="2018-07-25T07:35:00" tests="0" failures="0" time="0">
+  </testsuite>
+  <testsuite name="Discovery Server" timestamp="2018-07-25T07:35:01" tests="1" file="/home/adrian/Development/Blockchain/src/P2P/discoveryServer/discoveryServer.spec.js" failures="0" time="0.019">
+    <testcase name="Discovery Server can return an empty hash immediately after starting" time="0.019" classname="can return an empty hash immediately after starting">
+    </testcase>
+  </testsuite>
+</testsuites>
