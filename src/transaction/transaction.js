@@ -9,21 +9,44 @@ const privateKey = fs.readFileSync(nconf.get('privatekeyurl'),'utf8')
 const publicKey = fs.readFileSync(nconf.get('publickeyurl'),'utf8')
 
 class Transaction{
-  constructor({consignmentid,data, publickey}){
+  constructor({consignmentid,data, publickey, timestamp, id}){
 
     if(typeof publickey === 'undefined'){
       throw new Error("no publickey provided")
     }
-    
+    if(typeof timestamp != 'undefined' && !parseInt(timestamp)){
+      throw new Error("timestamp must be an integer")
+    }
     this.consignmentid = consignmentid
-    this.timestamp = Math.round((new Date().getTime()/1000))
-    this.data = JSON.stringify(data)
+    if(typeof timestamp == 'undefined')
+      this.timestamp = Math.round((new Date().getTime()/1000))
+    else this.timestamp = parseInt(timestamp)
+   
+    if(typeof data === 'string')
+      this.data = data
+    else this.data = JSON.stringify(data)
     this.publickey = publickey
     this.signature = Transaction.sign(this)
-    this.id = Transaction.createHash(this)
+    if(typeof id !== 'undefined')
+      this.id = id
+    else this.id = Transaction.createHash(this)
+    
 
+    if(Transaction.validate(this))return(this)
+    else throw new Error("transaction is invalid")
 
-    return(this)
+    
+  }
+
+  serialize(){
+    return JSON.stringify(this)
+  }
+
+  static deserialize(str){
+    const obj = JSON.parse(str)
+  
+    return new Transaction(obj)
+
   }
 
   static createHash(transaction){
@@ -33,7 +56,8 @@ class Transaction{
 
   static validate(transaction){
     const hash = crypto.createHash(nconf.get('hashalgorithm')).update(transaction.consignmentid + transaction.timestamp +transaction.data + transaction.publickey + transaction.signature).digest('hex')
-    if(hash === transaction.hash)return true
+  
+    if(hash === transaction.id)return true
     return false
 
   }
