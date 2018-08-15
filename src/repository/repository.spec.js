@@ -76,7 +76,7 @@ describe("Repository", () => {
 
     before(() => {
        return new Promise(resolve => {
-          repo.createCollection('transactions').then(() => {
+          repo.createCollection('transactionpool').then(() => {
             resolve()
           })
        })
@@ -84,7 +84,7 @@ describe("Repository", () => {
     })
     after(() => {
         return new Promise(resolve => {
-          Levelupdb.delete('transactions').then(() => {
+          Levelupdb.delete('transactionpool').then(() => {
             resolve()
           })
        })
@@ -100,7 +100,7 @@ describe("Repository", () => {
 
     repo.addTransaction(transaction).then((result)=> {
       result.should.eql('OK')
-      Levelupdb.getRecord('transactions',transactionid).then(data => {
+      Levelupdb.getRecord('transactionpool',transactionid).then(data => {
         data.id.should.eql(transactionid)
         done()
       })
@@ -141,7 +141,7 @@ describe("Repository", () => {
 
         repo.deleteTransaction(transactionid).then(result => {
           result.should.eql('OK')
-           Levelupdb.getRecord('transactions',transactionid).catch(error => { //should throw an error
+           Levelupdb.getRecord('transactionpool',transactionid).catch(error => { //should throw an error
            // logger.info(error)
             done()
           })

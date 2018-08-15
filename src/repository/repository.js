@@ -31,7 +31,7 @@ class Repository{
   addTransaction(transaction){
 
     if(Transaction.verify(transaction)){ //only add a valid transaction
-      return this.db.saveRecord('transactions', transaction.id,transaction)
+      return this.db.saveRecord('transactionpool', transaction.id,transaction)
     }
     else{
       return Promise.resolve("INVALID")
@@ -42,11 +42,11 @@ class Repository{
   }
 
   deleteTransaction(transactionid){
-    return this.db.deleteRecord('transactions', transactionid)
+    return this.db.deleteRecord('transactionpool', transactionid)
   }
 
   getTransaction(transactionid){
-    return this.db.getRecord('transactions',transactionid)
+    return this.db.getRecord('transactionpool',transactionid)
   }
 
 
