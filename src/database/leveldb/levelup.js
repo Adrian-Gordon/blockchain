@@ -145,6 +145,7 @@ class Levelupdb{
 
 Levelupdb.collections={}
 Levelupdb.dbpath=nconf.get('dbpath')
+console.log('dbpath: ' + Levelupdb.dbpath)
 
 
 module.exports = Object.assign({},{Levelupdb})

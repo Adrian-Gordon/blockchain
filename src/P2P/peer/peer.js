@@ -1,10 +1,12 @@
 'use strict'
 
+
 const request = require('request-promise-native')
+const Transaction = require('../../transaction/transaction').Transaction
 
 
 class Peer {
-  constructor(discoveryServerUrl, discoveryServerPort, port){
+  constructor(discoveryServerUrl, discoveryServerPort, port, repository){
 
     if(typeof discoveryServerUrl == 'undefined'){
       throw new Error("no discovery server URL provided")
@@ -22,10 +24,15 @@ class Peer {
       throw new Error("invalid peer port: '" + port + "'")
     }
 
+    if(typeof repository == 'undefined'){
+      throw new Error("no repository provided")
+    }
+
     this.discoveryServerUrl = discoveryServerUrl
     this.discoveryServerPort = parseInt(discoveryServerPort)
     this.port = port
     this.startTime = new Date().getTime()
+    this.repository = repository
 
   }
 
@@ -44,6 +51,27 @@ class Peer {
 
 
   }
+
+  createCollections(){
+  
+    return new Promise ((resolve, reject) => {
+
+      this.repository.createCollection("transactionpool")
+      .then(()=> {
+        this.repository.createCollection("blocks")
+      .then(() => {
+          resolve(true)
+      })
+      .catch((error)=>{
+        reject(error)
+      })
+        
+      })
+      
+    })
+  
+  }
+
   registerAsPeer(){
     const addPeerUrl = this.discoveryServerUrl + ":" + this.discoveryServerPort + "/activeNodes"
     return new Promise((resolve, reject) => {
@@ -69,6 +97,8 @@ class Peer {
   getStatus(){
     return({status:'OK', uptime:(new Date().getTime() - this.startTime)})
   }
+
+
 
 
   

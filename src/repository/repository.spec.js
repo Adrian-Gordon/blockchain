@@ -116,6 +116,7 @@ describe("Repository", () => {
 
       repo.addTransaction(transaction).then((result)=> {
         repo.getTransaction(transactionid).then((data)=> {
+          data.should.be.instanceof(Transaction)
           data.id.should.eql(transactionid)
           done()
         })

@@ -1,0 +1,6 @@
+{
+  "hashalgorithm":"SHA256",
+  "signatureformat":"hex",
+  "privatekeyurl":"./privatekey.pem",
+  "publickeyurl":"./publickey.pem"
+}

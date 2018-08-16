@@ -46,7 +46,18 @@ class Repository{
   }
 
   getTransaction(transactionid){
-    return this.db.getRecord('transactionpool',transactionid)
+    return new Promise((resolve, reject) => {
+      this.db.getRecord('transactionpool',transactionid)
+      .then((record) => {
+        const transaction = new Transaction(record)
+        resolve(transaction)
+      })
+      .catch(error => {
+        reject(error)
+      })
+
+    })
+   
   }
 
 
