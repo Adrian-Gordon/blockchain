@@ -38,8 +38,8 @@ describe("Block", () => {
   })
 
   it("fails to create a Block if any of the transactions is not a Transaction class object", (done) => {
-    const transaction1 = new Transaction({'consignmentid':'cabcdefg','data':{"some":"arbitrary","json":"data"},"publickey":publicKey})
-    const transaction2 = {'consignmentid':'cabcdefg','data':{"some":"arbitrary","json":"data"},"publickey":publicKey}
+    const transaction1 = new Transaction({'consignmentid':'cabcdefg','datatype':'application/json','data':{"some":"arbitrary","json":"data"},"publickey":publicKey})
+    const transaction2 = {'consignmentid':'cabcdefg','datatype':'application/json','data':{"some":"arbitrary","json":"data"},"publickey":publicKey}
 
 
      assert.throws(() => new Block({"previousHash":"abcdef","transactions":[transaction1, transaction2]}),Error, "transactions must be a non-empty array of Transaction class objects")
@@ -47,8 +47,8 @@ describe("Block", () => {
   })
 
   it("fails to create a Block if any of the transactions is not valid", (done) => {
-    const transaction1 = new Transaction({'consignmentid':'cabcdefg','data':{"some":"arbitrary","json":"data"},"publickey":publicKey})
-    const transaction2 = new Transaction({'consignmentid':'cabcdefg','data':{"someother":"arbitrary","json":"data"},"publickey":publicKey})
+    const transaction1 = new Transaction({'consignmentid':'cabcdefg','datatype':'application/json','data':{"some":"arbitrary","json":"data"},"publickey":publicKey})
+    const transaction2 = new Transaction({'consignmentid':'cabcdefg','datatype':'application/json','data':{"someother":"arbitrary","json":"data"},"publickey":publicKey})
 
     
     transaction2.consignmentid = "cabcdefh" //invalidates it
@@ -61,8 +61,8 @@ describe("Block", () => {
 
 
   it("creates a new Block", (done) => {
-    const transaction1 = new Transaction({'consignmentid':'cabcdefg','data':{"some":"arbitrary","json":"data"},"publickey":publicKey})
-    const transaction2 = new Transaction({'consignmentid':'cabcdefg','data':{"someother":"arbitrary","json":"data"},"publickey":publicKey})
+    const transaction1 = new Transaction({'consignmentid':'cabcdefg','datatype':'application/json','data':{"some":"arbitrary","json":"data"},"publickey":publicKey})
+    const transaction2 = new Transaction({'consignmentid':'cabcdefg','datatype':'application/json','data':{"someother":"arbitrary","json":"data"},"publickey":publicKey})
 
     const block = new Block({"previousHash":"abcdef","transactions":[transaction1, transaction2]})
     block.should.be.instanceof(Block)
@@ -70,6 +70,74 @@ describe("Block", () => {
     block.transactions.should.be.instanceof(String)
 
     done()
+  })
+
+  it("serializes a Block", (done) => {
+    const transaction1 = new Transaction({'consignmentid':'cabcdefg','datatype':'application/json','data':{"some":"arbitrary","json":"data"},"publickey":publicKey})
+    const transaction2 = new Transaction({'consignmentid':'cabcdefg','datatype':'application/json','data':{"someother":"arbitrary","json":"data"},"publickey":publicKey})
+
+    const block = new Block({"previousHash":"abcdef","transactions":[transaction1, transaction2]})
+
+    const serializedData = block.serialize()
+    serializedData.should.be.instanceof(String)
+    done()
+  })
+
+  it("de-serializes a block", (done) => {
+    //create a new regular block
+    const transaction1 = new Transaction({'consignmentid':'cabcdefg','datatype':'application/json','data':{"some":"arbitrary","json":"data"},"publickey":publicKey})
+    const transaction2 = new Transaction({'consignmentid':'cabcdefg','datatype':'application/json','data':{"someother":"arbitrary","json":"data"},"publickey":publicKey})
+
+    const block1 = new Block({"previousHash":"abcdef","transactions":[transaction1, transaction2]})
+
+    //serialize it
+    const serializedBlock = block1.serialize()
+
+   
+
+    //console.log(block2DataObject)
+
+    const block2 = Block.deserialize(serializedBlock)
+
+    block2.should.be.instanceof(Block)
+    Block.validate(block2).should.eql(true)
+    block2.transactions.should.be.instanceof(String)
+
+    block2.id.should.eql(block1.id)   //the two blocks should be identical
+
+    done()
+
+
+  })
+  it("fails to validate an invalid block", (done) => {
+     //create a new regular block
+    const transaction1 = new Transaction({'consignmentid':'cabcdefg','datatype':'application/json','data':{"some":"arbitrary","json":"data"},"publickey":publicKey})
+    const transaction2 = new Transaction({'consignmentid':'cabcdefg','datatype':'application/json','data':{"someother":"arbitrary","json":"data"},"publickey":publicKey})
+
+    const block1 = new Block({"previousHash":"abcdef","transactions":[transaction1, transaction2]})
+
+    block1.previousHash = "abcdeg"
+
+    Block.validate(block1).should.eql(false)
+    done()
+
+  })
+
+  it("fails to create a block from an invalid serialized block", (done) => {
+     //create a new regular block
+    const transaction1 = new Transaction({'consignmentid':'cabcdefg','datatype':'application/json','data':{"some":"arbitrary","json":"data"},"publickey":publicKey})
+    const transaction2 = new Transaction({'consignmentid':'cabcdefg','datatype':'application/json','data':{"someother":"arbitrary","json":"data"},"publickey":publicKey})
+
+    const block1 = new Block({"previousHash":"abcdef","transactions":[transaction1, transaction2]})
+
+    block1.previousHash = "abcdeg" //invalidate it
+
+    const serializedInvalidBlock = block1.serialize()
+
+    assert.throws(() => Block.deserialize(serializedInvalidBlock),Error, "block is invalid")
+
+    done()
+
   })
 })
 

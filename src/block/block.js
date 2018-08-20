@@ -6,56 +6,76 @@ const nconf = require('../config/conf.js').nconf
 const Transaction = require('../transaction/transaction.js').Transaction
 
 class Block{
+  /*timestamp and id should be provided for a de-serialised Block*/
+  /*if they re provided, transactions should be a string*/
+  /*If id and timestamp are not provided, transactions should be an array of Transactions*/
   constructor({previousHash, transactions, timestamp, id}){
-    let transactionsArray =[]
+
+    //previous hash must always be provided, and must be a string
     if(typeof previousHash == 'undefined'){
       throw new Error("previousHash must be provided")
     }
     else if(typeof previousHash !== 'string'){
       throw new Error('previousHash must be a string')
     }
+
+    //transactions must always be provided, but will be either a string or an array of Transactions
     if(typeof transactions == 'undefined'){
       throw new Error("transactions must be provided")
     }
-    else if(transactions.length == 0){
-      throw new Error('transactions must be a non-empty array')
+
+    if(typeof id !== 'undefined'){
+      if(typeof timestamp == 'undefined'){
+        throw new Error("both timestamp and id must be provided for a de-serialised Block")
+      }
+    }
+    if(typeof timestamp !== 'undefined'){
+      if(typeof id == 'undefined'){
+         throw new Error("both timestamp and id must be provided for a de-serialised Block")
+      }
     }
 
-    for(let i=0; i< transactions.length; i++){
-      if(transactions[i] instanceof Transaction);
-      else throw new Error("transactions must be a non-empty array of Transaction class objects")
+    //It's a de-serialised block
+    if(typeof id !== 'undefined' && typeof timestamp !== 'undefined'){
+      if(typeof transactions !== 'string'){
+        throw new Error("transactions must be stringified for a de-serialised Block")
+      }
 
-      if(!Transaction.validate(transactions[i]))
-        throw new Error("Transaction " + i + " is not valid")
-
-      transactionsArray.push(transactions[i].serialize())
-    }
-
-    if(typeof timestamp != 'undefined' && !parseInt(timestamp)){
-      throw new Error("timestamp must be an integer")
-    }
-
-    //if this is block de-serialised out of the database, or provided in a message
-    //timestamp and id will be provided
-
-    if(typeof timestamp == 'undefined')
-      this.timestamp = Math.round((new Date().getTime()/1000))
-    else this.timestamp = parseInt(timestamp)
-
-    if(typeof id !== 'undefined')
+      this.timestamp = timestamp
+      this.previousHash = previousHash
+      this.transactions = transactions
       this.id = id
-    else this.id = Block.createHash(this)
+    }
+    else{ //block to be created from stratch
+      if(!Array.isArray(transactions)){
+         throw new Error('transactions must be an array')
+      }
+      if(transactions.length == 0){
+        throw new Error('transactions must be a non-empty array')
+      }
+      let transactionsArray =[]
+      for(let i=0; i< transactions.length; i++){
+        if(transactions[i] instanceof Transaction);
+        else throw new Error("transactions must be a non-empty array of Transaction class objects")
 
+        if(!Transaction.validate(transactions[i]))
+          throw new Error("Transaction " + i + " is not valid")
 
+        transactionsArray.push(transactions[i].serialize())
+      }
+      this.timestamp = Math.round((new Date().getTime()/1000))
+      this.previousHash = previousHash
+      this.transactions = JSON.stringify(transactionsArray)
+      this.id =  Block.createHash(this)
+    }
 
-
-    this.previousHash = previousHash
-    this.transactions = JSON.stringify(transactionsArray)
-   
+    //Final validation
     if(Block.validate(this))return(this)
     else throw new Error("block is invalid")
 
+
   }
+ 
 
   serialize(){
     return JSON.stringify(this)
@@ -85,5 +105,5 @@ class Block{
 }
 
 
-module.exports =({},{Block})
+module.exports =Object.assign({},{Block})
 

@@ -9,7 +9,14 @@ const privateKey = fs.readFileSync(nconf.get('privatekeyurl'),'utf8')
 const publicKey = fs.readFileSync(nconf.get('publickeyurl'),'utf8')
 
 class Transaction{
-  constructor({consignmentid,data, publickey, timestamp, id}){
+  constructor({consignmentid,data, publickey, timestamp, id, datatype}){
+
+    if(typeof datatype === 'undefined'){
+      throw new Error("no transaction datatype provided")
+    }
+    else if(typeof datatype !== 'string'){
+      throw new Error("transaction datatype must be a string")
+    }
 
     if(typeof publickey === 'undefined'){
       throw new Error("no publickey provided")
@@ -22,6 +29,8 @@ class Transaction{
       this.timestamp = Math.round((new Date().getTime()/1000))
     else this.timestamp = parseInt(timestamp)
    
+    this.datatype = datatype
+  
     if(typeof data === 'string')
       this.data = data
     else this.data = JSON.stringify(data)
@@ -30,6 +39,7 @@ class Transaction{
     if(typeof id !== 'undefined')
       this.id = id
     else this.id = Transaction.createHash(this)
+    
     
 
     if(Transaction.validate(this))return(this)
@@ -50,12 +60,12 @@ class Transaction{
   }
 
   static createHash(transaction){
-    return crypto.createHash(nconf.get('hashalgorithm')).update(transaction.consignmentid + transaction.timestamp +transaction.data + transaction.publickey + transaction.signature).digest('hex')
+    return crypto.createHash(nconf.get('hashalgorithm')).update(transaction.consignmentid + transaction.timestamp +transaction.datatype + transaction.data + transaction.publickey + transaction.signature).digest('hex')
 
   }
 
   static validate(transaction){
-    const hash = crypto.createHash(nconf.get('hashalgorithm')).update(transaction.consignmentid + transaction.timestamp +transaction.data + transaction.publickey + transaction.signature).digest('hex')
+    const hash = crypto.createHash(nconf.get('hashalgorithm')).update(transaction.consignmentid + transaction.timestamp + transaction.datatype + transaction.data + transaction.publickey + transaction.signature).digest('hex')
   
     if(hash === transaction.id)return true
     return false
@@ -64,14 +74,14 @@ class Transaction{
 
   static sign(transaction){
     const sign = crypto.createSign(nconf.get('hashalgorithm'))
-    sign.update(transaction.consignmentid + transaction.timestamp +transaction.data + transaction.publickey)
+    sign.update(transaction.consignmentid + transaction.timestamp + transaction.datatype + transaction.data + transaction.publickey)
     return sign.sign(privateKey,nconf.get("signatureformat"))
     
   }
 
   static verify(transaction){
     const verify = crypto.createVerify(nconf.get('hashalgorithm'))
-    verify.update(transaction.consignmentid + transaction.timestamp +transaction.data + transaction.publickey)
+    verify.update(transaction.consignmentid + transaction.timestamp + transaction.datatype + transaction.data + transaction.publickey)
     return(verify.verify(transaction.publickey,transaction.signature,nconf.get("signatureformat")))
 
   }
