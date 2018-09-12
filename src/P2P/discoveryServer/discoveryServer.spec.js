@@ -63,8 +63,7 @@ describe('Discovery Server', () => {
     .set('Content-Type','application/json')
     .set('Accept','aplication/json')
     .expect((res) => {
-      let r = res.body["::ffff:127.0.0.1"]
-      r.should.containEql(5000)
+      res.body.port.should.eql(5000)
     })
     .expect(201, done)
   })

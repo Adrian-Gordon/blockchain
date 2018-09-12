@@ -118,6 +118,39 @@ class Levelupdb{
     })
   }
 
+  static getAllRecords(collectionName){
+    return new Promise((resolve, reject) => {
+      let values = []
+      if(typeof collectionName == 'undefined'){
+          reject('collection name must be provided')
+        }
+        else {
+          const db = Levelupdb.collections[collectionName]
+          if(typeof db == 'undefined'){
+            reject('collection: ' +  collectionName + ' does not exist')
+          }
+          else{
+            db.createValueStream({objectMode: true})
+            .on('data', value => {
+              values.push(JSON.parse(value.toString('utf-8')))
+
+            })
+            .on('error', error => {
+              reject(error)
+            })
+            .on('end', ()=> {
+              resolve(values)
+            })
+            .on('close', () => {
+              resolve(values)
+            })
+          }
+        }
+
+    })
+
+  }
+
   static deleteRecord(collectionName, id){
     return new Promise((resolve, reject)=>{
        if(typeof collectionName == 'undefined' || typeof id == 'undefined'){

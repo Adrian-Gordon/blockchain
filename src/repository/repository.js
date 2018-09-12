@@ -7,6 +7,8 @@ const logger = require('../logger/logger.js')(module)
 
 const Transaction = require('../transaction/transaction').Transaction
 
+const Block = require('../block/block').Block
+
 
 class Repository{
   constructor(db){
@@ -59,6 +61,63 @@ class Repository{
     })
    
   }
+
+  getAllTransactions(){
+    return new Promise((resolve, reject) => {
+      this.db.getAllRecords('transactionpool')
+      .then(transactions => {
+        resolve(transactions.map((obj)=> {return new Transaction(obj)}))
+      })
+      .catch(error => {
+        reject(error)
+      })
+
+    })
+  }
+
+  addBlock(block){
+
+    if(Block.validate(block)){ //only add a valid block
+      return this.db.saveRecord('blocks', block.id,block)
+    }
+    else{
+      return Promise.resolve("INVALID")
+    }
+  
+  }
+
+  getBlock(blockid){
+    return new Promise((resolve, reject) => {
+      this.db.getRecord('blocks',blockid)
+      .then((record) => {
+        const block = new Block(record)
+        resolve(block)
+      })
+      .catch(error => {
+        reject(error)
+      })
+
+    })
+   
+  }
+
+  getAllBlocks(){
+    return new Promise((resolve, reject) => {
+      this.db.getAllRecords('blocks')
+      .then(blocks => {
+        resolve(blocks.map((obj)=> {return new Block(obj)}))
+      })
+      .catch(error => {
+        reject(error)
+      })
+
+    })
+  }
+
+  deleteBlock(blockid){
+    return this.db.deleteRecord('blocks', blockid)
+  }
+
 
 
 }

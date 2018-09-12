@@ -41,10 +41,10 @@ const startServer = (port) => {
         if(typeof app.activeNodes[ip] == 'undefined'){
           app.activeNodes[ip] = [port]
         }
-        else{
+        else if(!app.activeNodes[ip].includes(port)){
           app.activeNodes[ip].push(port)
         }
-        res.status(status.CREATED).send(app.activeNodes)
+        res.status(status.CREATED).send({"ip": ip, "port":port})
       }
       
     })

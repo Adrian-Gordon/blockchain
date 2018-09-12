@@ -199,6 +199,53 @@ describe('Levelup', () => {
 
     })
   })
+  describe("retrieves all records from a collection", () => {
+   after(() => {
+      Levelupdb.close('testdb').then(result => {
+        //leveldown.destroy('./testdb', (error)=> {
+         // logger.info(error)
+
+       // })
+       Promise.resolve(Levelupdb.delete('testdb'))
+      })
+    })
+
+    it('fails if the wrong number of arguments is provided', (done) => {
+       Levelupdb.getAllRecords().catch(error => {
+          error.should.eql('collection name must be provided')
+          done()
+        })
+
+    })
+    it('fails if the collection does not exist', (done) => {
+       Levelupdb.getAllRecords('testdb').catch(error => {
+          error.should.eql('collection: testdb does not exist')
+          done()
+        })
+
+    })
+    it('returns all records', (done) => {
+       Levelupdb.open('testdb').then(result => {
+
+          const records = []
+          records.push(Levelupdb.saveRecord('testdb','abc123',{'test':'123'}))
+          records.push(Levelupdb.saveRecord('testdb','abc124',{'test':'124'}))
+          records.push(Levelupdb.saveRecord('testdb','abc125',{'test':'125'}))
+
+          //const promises = records.map(Levelupdb.saveRecord)
+         // console.log(promises)
+          Promise.all(records).then((results) => {
+            Levelupdb.getAllRecords('testdb','abc123').then(data => {
+               expect(data.length).to.eql(3)
+                done()
+              })
+          })
+
+          
+       })
+
+    })
+  })
   describe("Delete a record from a collection", () => {
      after(() => {
       Levelupdb.close('testdb').then(result => {

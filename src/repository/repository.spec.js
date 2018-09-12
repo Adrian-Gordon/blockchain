@@ -18,6 +18,8 @@ const nconf = require('../config/conf.js').nconf
 
 const Transaction = require('../transaction/transaction.js').Transaction
 
+const Block = require('../block/block.js').Block
+
 
 const Repository = require('./repository').Repository
 
@@ -95,7 +97,7 @@ describe("Repository", () => {
       
 
 
-    const transaction = new Transaction({'consignmentid':'cabcdefg','data':{"some":"arbitrary","json":"data"},"publickey":publicKey})
+    const transaction = new Transaction({'consignmentid':'cabcdefg','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey})
     const transactionid = transaction.id
 
     repo.addTransaction(transaction).then((result)=> {
@@ -111,7 +113,7 @@ describe("Repository", () => {
     })
 
     it("retrieves a transaction from a leveldb database", (done) => {
-      const transaction = new Transaction({'consignmentid':'cabcdefg','data':{"some":"arbitrary","json":"data"},"publickey":publicKey})
+      const transaction = new Transaction({'consignmentid':'cabcdefg','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey})
       const transactionid = transaction.id
 
       repo.addTransaction(transaction).then((result)=> {
@@ -135,7 +137,7 @@ describe("Repository", () => {
     
 
     it("deletes a transaction from a leveldb database", (done) => {
-      const transaction = new Transaction({'consignmentid':'cabcdefg','data':{"some":"arbitrary","json":"data"},"publickey":publicKey})
+      const transaction = new Transaction({'consignmentid':'cabcdefg','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey})
       const transactionid = transaction.id
 
       repo.addTransaction(transaction).then((result)=> {
@@ -151,7 +153,7 @@ describe("Repository", () => {
     })
 
     it("fails to add an invalid transaction to a leveldb database", (done) => {
-      const transaction = new Transaction({'consignmentid':'cabcdefg','data':{"some":"arbitrary","json":"data"},"publickey":publicKey})
+      const transaction = new Transaction({'consignmentid':'cabcdefg','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey})
       const transactionid = transaction.id
       transaction.consignmentid = 't1234568' //change some of the data
       repo.addTransaction(transaction).then((result) => {
@@ -162,6 +164,219 @@ describe("Repository", () => {
         })
         
       })
+
+    })
+
+    it("retrieves all transactions from the repository", (done) => {
+
+      const transactions = [
+        
+      ]
+      transactions.push(new Transaction({'consignmentid':'cabcdefg','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+      transactions.push(new Transaction({'consignmentid':'cabcdefh','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+      transactions.push(new Transaction({'consignmentid':'cabcdefi','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+      const promises = transactions.map(repo.addTransaction.bind(repo))
+
+     
+
+      Promise.all(promises).then((results) =>{
+        
+        repo.getAllTransactions().then(transactionsReturned => {
+           expect(transactionsReturned.length).to.eql(3)
+           expect(transactionsReturned[0]).to.be.instanceof(Transaction)
+           done()
+        })
+        .catch((error) => {
+          
+          expect.fail(null, null ,error)
+          done()
+        })
+       
+      })
+      .catch((error) => {
+        console.log(error)
+        expect.fail(null, null ,error)
+        done()
+      })
+
+
+    })
+  })
+
+describe("blocks", () => {
+
+    const repo = new Repository(Levelupdb)
+
+    before(() => {
+       return new Promise(resolve => {
+          repo.createCollection('blocks').then(() => {
+            resolve()
+          })
+       })
+      
+    })
+    after(() => {
+        return new Promise(resolve => {
+          Levelupdb.delete('blocks').then(() => {
+            resolve()
+          })
+       })
+
+    })
+
+    it("adds a valid block to a leveldb database", (done) => {
+      
+       const transactions = [
+        
+      ]
+      transactions.push(new Transaction({'consignmentid':'cabcdefg','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+      transactions.push(new Transaction({'consignmentid':'cabcdefh','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+      transactions.push(new Transaction({'consignmentid':'cabcdefi','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+      
+      const block = new Block({"previousHash":"abcdef","transactions":transactions})
+
+      const blockid = block.id
+
+      repo.addBlock(block).then(result => {
+        result.should.eql('OK')
+        Levelupdb.getRecord('blocks',blockid).then(data => {
+          data.id.should.eql(blockid)
+          done()
+        })
+
+      })
+
+    
+    })
+    
+
+    it("retrieves a block from a leveldb database", (done) => {
+    
+      const transactions = [
+        
+      ]
+      transactions.push(new Transaction({'consignmentid':'cabcdefg','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+      transactions.push(new Transaction({'consignmentid':'cabcdefh','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+      transactions.push(new Transaction({'consignmentid':'cabcdefi','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+      
+      const block = new Block({"previousHash":"abcdef","transactions":transactions})
+
+      const blockid = block.id
+
+      repo.addBlock(block).then(result => {
+        repo.getBlock(blockid).then(data => {
+          data.should.be.instanceof(Block)
+          data.id.should.eql(blockid)
+          done()
+        })
+
+      })
+
+    })
+    it("returns a not found error when retrieving a non-existant block from a leveldb database", (done) => {
+      repo.getBlock('b1234568').catch((error)=> {
+        error.notFound.should.eql(true)
+        done()
+      })
+
+    })
+
+   
+
+    it("deletes a block from a leveldb database", (done) => {
+      
+      const transactions = [
+        
+      ]
+      transactions.push(new Transaction({'consignmentid':'cabcdefg','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+      transactions.push(new Transaction({'consignmentid':'cabcdefh','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+      transactions.push(new Transaction({'consignmentid':'cabcdefi','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+      
+      const block = new Block({"previousHash":"abcdef","transactions":transactions})
+
+      const blockid = block.id
+
+      repo.addBlock(block).then(result => {
+        repo.deleteBlock(blockid).then(result => {
+          result.should.eql('OK')
+          Levelupdb.getRecord('blocks',blockid).catch(error => { //should throw an error
+           // logger.info(error)
+            done()
+          })
+        })
+
+      })
+
+    })
+
+    it("fails to add an invalid block to a leveldb database", (done) => {
+      
+      const transactions = [
+        
+      ]
+      transactions.push(new Transaction({'consignmentid':'cabcdefg','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+      transactions.push(new Transaction({'consignmentid':'cabcdefh','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+      transactions.push(new Transaction({'consignmentid':'cabcdefi','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+      
+      const block = new Block({"previousHash":"abcdef","transactions":transactions})
+
+      const blockid = block.id
+      block.previousHash = "abcdeg"
+
+      repo.addBlock(block).then(result => {
+        result.should.eql('INVALID')
+        Levelupdb.getRecord('blocks',blockid).catch(error => {
+          
+          done()
+        })
+
+      })
+
+
+
+    })
+
+    it("retrieves all blocks from the repository", (done) => {
+      const transactions1 = [
+        
+      ]
+      transactions1.push(new Transaction({'consignmentid':'cabcdefg','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+      transactions1.push(new Transaction({'consignmentid':'cabcdefh','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+      transactions1.push(new Transaction({'consignmentid':'cabcdefi','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+      
+      const block1 = new Block({"previousHash":"abcdef","transactions":transactions1})
+
+      const transactions2 = [
+        
+      ]
+      transactions2.push(new Transaction({'consignmentid':'cabcdefg','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+      transactions2.push(new Transaction({'consignmentid':'cabcdefh','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+      transactions2.push(new Transaction({'consignmentid':'cabcdefi','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+      
+      const block2 = new Block({"previousHash":block1.id,"transactions":transactions2})
+
+      const transactions3 = [
+        
+      ]
+      transactions3.push(new Transaction({'consignmentid':'cabcdefg','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+      transactions3.push(new Transaction({'consignmentid':'cabcdefh','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+      transactions3.push(new Transaction({'consignmentid':'cabcdefi','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+      
+      const block3 = new Block({"previousHash":block2.id,"transactions":transactions3})
+
+      const blocks = [block1, block2, block3]
+
+      const promises = blocks.map(repo.addBlock.bind(repo))
+
+      Promise.all(promises).then(()=> {
+        repo.getAllBlocks().then((results) => {
+          results.length.should.eql(3)
+          done()
+        })
+        
+      })
+      
+
 
     })
   })

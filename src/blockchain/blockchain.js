@@ -31,9 +31,45 @@ class Blockchain{
          throw new Error("both length and latest block id must be provided for a de-serialised Blockchain")
       }
     }
-    this.length = 0
+    if(typeof length !== "undefined")
+      this.length = parseInt(length)
+    else this.length = 0
+
+    if(typeof latestblockid !== "undefined"){
+      this.latestblockid = latestblockid
+    }
     return this
   }
+
+  getLength(){
+    return this.length
+  }
+
+  incrementLength(){
+    this.length++
+    return this.length
+  }
+
+  getLatestBlockId(){
+    return this.latestblockid
+  }
+
+  setLatestBlockId(blockId){
+    this.latestblockid = blockId
+    return this.latestblockid
+  }
+
+  serialize(){
+    return JSON.stringify(this)
+  }
+
+  static deserialize(str){
+    const obj = JSON.parse(str)
+  
+    return new Blockchain(obj)
+  }
+
+
 }
 
 module.exports =Object.assign({},{Blockchain})
