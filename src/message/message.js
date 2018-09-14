@@ -1,6 +1,6 @@
 'use strict'
 
-const validActions = ["ping","sendblockchainlength","sendblocks"]
+const validActions = ["ping","sendblockchainlength","sendblocks","addblock","addtransaction"]
 
 class Message{
   constructor({peer, action, data}){

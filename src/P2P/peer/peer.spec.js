@@ -99,6 +99,26 @@ describe('Peer Instantiation', () => {
     peer.repository.should.be.instanceof(Repository)
     expect(peer.messageQueue).to.be.a('array')
     expect(peer.messageQueue.length).to.eql(0)
+    expect(peer.state).to.eql("running")
+    done()
+  })
+
+  it("throws an error if setting a peer state to an invalid state", (done) =>{
+    const peer = new Peer('http://localhost',3000, 3001, new Repository(Levelupdb))
+    expect(() => peer.setState("somestate")).to.throw("invalid state: 'somestate'")
+    done()
+  })
+
+  it("gets a peer state", (done) =>{
+    const peer = new Peer('http://localhost',3000, 3001, new Repository(Levelupdb))
+    expect(peer.state).to.eql("running")
+    done()
+  })
+
+  it("sets a peer state", (done) =>{
+    const peer = new Peer('http://localhost',3000, 3001, new Repository(Levelupdb))
+    peer.setState("awaitingblockchain")
+    expect(peer.getState()).to.eql("awaitingblockchain")
     done()
   })
 
@@ -122,7 +142,7 @@ describe('Peer Instantiation', () => {
 
   it("sets the blockchain property of a peer", (done) => {
     const peer = new Peer('http://localhost',3000, 3001, new Repository(Levelupdb))
-    const blockchain = new Blockchain({"length": 10, "latestblockid": "abcdef"})
+    const blockchain = new Blockchain({"length": 10, "latestblockid": "abcdef","latestblockindex":10})
     peer.setBlockchain(blockchain)
     expect(peer.blockchain).to.eql(blockchain)
     done()
@@ -130,7 +150,7 @@ describe('Peer Instantiation', () => {
 
   it("gets the blockchain property of the peer", (done) => {
     const peer = new Peer('http://localhost',3000, 3001, new Repository(Levelupdb))
-    const blockchain = new Blockchain({"length": 10, "latestblockid": "abcdef"})
+    const blockchain = new Blockchain({"length": 10, "latestblockid": "abcdef","latestblockindex":20})
     peer.setBlockchain(blockchain)
     expect(peer.getBlockchain()).to.be.instanceof(Blockchain)
     done()
@@ -256,6 +276,218 @@ describe('Peer Connectivity', () => {
   
 })
 
+describe("Peer transaction processing", () => {
+ let peer = null
+ beforeEach((done) => {
+     peer = new Peer('http://localhost',3000, 3001, new Repository(Levelupdb))
+     peer.createCollections().then(() => {
+      done()
+
+      
+     })
+
+  })
+
+  afterEach((done) => {
+    peer.repository.deleteCollection('blocks').then(() => {
+      peer.repository.deleteCollection("transactionpool").then(()=> {
+        done()
+      })
+    })
+
+  })
+
+  it("should throw an error when asked to add a non-transaction object", (done) => {
+     peer.addTransaction("trans1").catch(error=> {
+        expect(error).to.eql("transaction must be of class Transaction")
+        done()
+      })
+  })
+
+  it("should throw an error when asked to add an invalid transaction", (done) => {
+
+    const transaction = new Transaction({'consignmentid':'cabcdefi','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey})
+
+      transaction.consignmentid = "cabcdefj" //invalidate it
+      peer.addTransaction(transaction).catch(error => {
+        expect(error).to.eql("transaction is invalid")
+        done()
+      })
+  })
+
+  it("should add a new transaction", (done) => {
+
+    const transaction = new Transaction({'consignmentid':'cabcdefi','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey})
+
+     
+      peer.addTransaction(transaction)
+      .then((result) => {
+        expect(result).to.be.instanceof(Transaction)
+        expect(result.id).to.eql(transaction.id)
+        peer.repository.getTransaction(transaction.id)
+        .then((trans) => {
+          expect(trans.id).to.eql(transaction.id)
+          done()
+        })
+
+       
+
+      })
+      
+  })
+
+})
+
+describe("Peer block processing", () => {
+  let peer = null
+  beforeEach((done) => {
+     peer = new Peer('http://localhost',3000, 3001, new Repository(Levelupdb))
+     peer.createCollections().then(() => {
+      //add an origin block
+      const originBlock = new Block({"previousHash": "-1", "transactions":[],"index":0})
+      //save to the database
+      peer.repository.addBlock(originBlock).then(result => {
+        //set up the blockchain object
+        const blockchain = new Blockchain({"latestblockid": originBlock.id, "latestblockindex": originBlock.index, "length":1})
+        peer.setBlockchain(blockchain)
+        done()
+      })
+
+      
+     })
+
+  })
+
+  afterEach((done) => {
+    peer.repository.deleteCollection('blocks').then(() => {
+      peer.repository.deleteCollection("transactionpool").then(()=> {
+        done()
+      })
+    })
+
+  })
+  it("should throw an error when asked to add a non block object ", (done) => {
+    
+
+      peer.addBlock("block1").catch(error=> {
+        expect(error).to.eql("block must be of class Block")
+        done()
+      })
+      
+      
+
+  
+  })
+
+  it("should throw an error when asked to add an invalid block", (done) => {
+    
+      const transactions1 = [
+        
+      ]
+      transactions1.push(new Transaction({'consignmentid':'cabcdefg','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+      transactions1.push(new Transaction({'consignmentid':'cabcdefh','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+      transactions1.push(new Transaction({'consignmentid':'cabcdefi','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+      
+      const block1 = new Block({"previousHash":peer.blockchain.getLatestBlockId(),"transactions":transactions1, "index":1})
+
+      block1.timestamp = 1001 //invalidate it
+      peer.addBlock(block1).catch(error => {
+        expect(error).to.eql("block is invalid")
+        done()
+      })
+
+  
+  })
+
+  it("should throw an error when asked to add a block with an index <= the current value for next index ", (done) => {
+    
+      const transactions1 = [
+        
+      ]
+      transactions1.push(new Transaction({'consignmentid':'cabcdefg','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+      transactions1.push(new Transaction({'consignmentid':'cabcdefh','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+      transactions1.push(new Transaction({'consignmentid':'cabcdefi','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+      
+      const block1 = new Block({"previousHash":peer.blockchain.getLatestBlockId(),"transactions":transactions1, "index":-1})
+
+       peer.addBlock(block1).catch(error => {
+        expect(error).to.eql("block index less than or equal to latest")
+        done()
+      })
+      
+
+  
+  })
+
+  it("should throw an error when asked to add a block with a previous hash that is not the current value for the latest block id", (done) => {
+    
+      const transactions1 = [
+        
+      ]
+      transactions1.push(new Transaction({'consignmentid':'cabcdefg','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+      transactions1.push(new Transaction({'consignmentid':'cabcdefh','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+      transactions1.push(new Transaction({'consignmentid':'cabcdefi','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+      
+      const block1 = new Block({"previousHash":"abcde","transactions":transactions1, "index":1})
+
+      peer.addBlock(block1).catch(error => {
+        expect(error).to.eql("block previousHash not hash of latest block")
+        done()
+      })
+
+  
+  })
+
+  it("should throw an error when asked to add a block with an index greater than 1+ the current value for next index ", (done) => {
+    
+      const transactions1 = [
+        
+      ]
+      transactions1.push(new Transaction({'consignmentid':'cabcdefg','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+      transactions1.push(new Transaction({'consignmentid':'cabcdefh','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+      transactions1.push(new Transaction({'consignmentid':'cabcdefi','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+      
+      const block1 = new Block({"previousHash":peer.blockchain.getLatestBlockId(),"transactions":transactions1, "index":2})
+
+
+      peer.addBlock(block1).catch(error => {
+        expect(error).to.eql("block index greater than next index")
+        done()
+      })
+
+  
+  })
+  it("should add a new block to the database, and update the blockchain object", (done) => {
+    
+      const transactions1 = [
+        
+      ]
+      transactions1.push(new Transaction({'consignmentid':'cabcdefg','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+      transactions1.push(new Transaction({'consignmentid':'cabcdefh','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+      transactions1.push(new Transaction({'consignmentid':'cabcdefi','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+      
+      const block1 = new Block({"previousHash":peer.blockchain.getLatestBlockId(),"transactions":transactions1, "index":1})
+
+      const l = peer.blockchain.getLength()
+      peer.addBlock(block1).then(result => {
+        expect(result).to.eql(block1)
+        expect(peer.blockchain.getLatestBlockId()).to.eql(block1.id)
+        expect(peer.blockchain.getLatestBlockIndex()).to.eql(block1.index)
+        expect(peer.blockchain.length).to.eql(l + 1)
+        peer.repository.getBlock(result.id)
+        .then((blk) => {
+          expect(blk.id).to.eql(result.id)
+          done()
+        })
+        
+      })
+      
+
+  
+  })
+
+})
+
 describe("Input Message Processing", () => {
   it("should throw an error when trying to push a non-message on to the message queue", (done) => {
     const peer1 = new Peer('http://localhost',3000, 3001, new Repository(Levelupdb))
@@ -339,7 +571,7 @@ describe("Input Message Processing", () => {
 
   it("should process a received 'sendblockchainlength' message", (done) => {
     const peer = new Peer('http://localhost',3000, 3001, new Repository(Levelupdb))
-    const blockchain = new Blockchain({"length": 10, "latestblockid": "abcdef"})
+    const blockchain = new Blockchain({"length": 10, "latestblockid": "abcdef","latestblockindex": 20})
     peer.setBlockchain(blockchain)
 
     const sendblockchainLengthMessage = new Message({peer:"127.0.0.1:4000", action:"sendblockchainlength"})
@@ -367,7 +599,7 @@ describe("Input Message Processing", () => {
       transactions1.push(new Transaction({'consignmentid':'cabcdefh','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
       transactions1.push(new Transaction({'consignmentid':'cabcdefi','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
       
-      const block1 = new Block({"previousHash":"abcdef","transactions":transactions1})
+      const block1 = new Block({"previousHash":"abcdef","transactions":transactions1, "index":1})
 
       const transactions2 = [
         
@@ -376,7 +608,7 @@ describe("Input Message Processing", () => {
       transactions2.push(new Transaction({'consignmentid':'cabcdefh','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
       transactions2.push(new Transaction({'consignmentid':'cabcdefi','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
       
-      const block2 = new Block({"previousHash":block1.id,"transactions":transactions2})
+      const block2 = new Block({"previousHash":block1.id,"transactions":transactions2, "index":2})
 
       const transactions3 = [
         
@@ -385,7 +617,7 @@ describe("Input Message Processing", () => {
       transactions3.push(new Transaction({'consignmentid':'cabcdefh','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
       transactions3.push(new Transaction({'consignmentid':'cabcdefi','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
       
-      const block3 = new Block({"previousHash":block2.id,"transactions":transactions3})
+      const block3 = new Block({"previousHash":block2.id,"transactions":transactions3,"index": 3})
 
       const blocks = [block1, block2, block3]
 
@@ -394,7 +626,7 @@ describe("Input Message Processing", () => {
       Promise.all(promises).then((result)=> {
         
         
-        //now respond to the message
+        //process the received message
         const sendblocksMessage = new Message({peer:"127.0.0.1:4000", action:"sendblocks"})
 
         const peerSpy = sinon.stub(peer, "sendMessage").callsFake(() => { return(true)})
@@ -418,6 +650,438 @@ describe("Input Message Processing", () => {
     })
 
     })
+  })
+
+   it("should process a received 'addblock' message, throwing an error if the received data is not a block", (done) => {
+    const peer = new Peer('http://localhost',3000, 3001, new Repository(Levelupdb))
+    peer.createCollections().then(() => {
+
+       //add an origin block
+      const originBlock = new Block({"previousHash": "-1", "transactions":[],"index":0})
+      //save to the database
+      peer.repository.addBlock(originBlock).then(result => {
+        //set up the blockchain object
+        const blockchain = new Blockchain({"latestblockid": originBlock.id, "latestblockindex": originBlock.index, "length":1})
+        peer.setBlockchain(blockchain)
+        
+      
+        //build a message
+
+        const addBlockMessage = new Message({peer:"127.0.0.1:4000", action:"addblock", data: "{\"some\":\"data\"}"})
+
+        //process the received message
+        peer.processReceivedMessage(addBlockMessage)
+        .catch((error) => {
+          expect(error).to.exist
+           peer.repository.deleteCollection('blocks').then(() => { //cleanup
+              peer.repository.deleteCollection("transactionpool").then(()=> {
+                done()
+              })
+            })
+        })
+
+        
+
+      })
+
+
+
+      
+    })
+
+
+  })
+
+  it("should process a received 'addblock' message, throwing an error if the received block is invalid", (done) => {
+    const peer = new Peer('http://localhost',3000, 3001, new Repository(Levelupdb))
+    peer.createCollections().then(() => {
+
+       //add an origin block
+      const originBlock = new Block({"previousHash": "-1", "transactions":[],"index":0})
+      //save to the database
+      peer.repository.addBlock(originBlock).then(result => {
+        //set up the blockchain object
+        const blockchain = new Blockchain({"latestblockid": originBlock.id, "latestblockindex": originBlock.index, "length":1})
+        peer.setBlockchain(blockchain)
+        
+        //build a Block
+        const transactions1 = [
+        
+        ]
+        transactions1.push(new Transaction({'consignmentid':'cabcdefg','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+        transactions1.push(new Transaction({'consignmentid':'cabcdefh','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+        transactions1.push(new Transaction({'consignmentid':'cabcdefi','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+        
+        const block1 = new Block({"previousHash":"abcdef","transactions":transactions1, "index":1})
+
+        //invalidate the block
+        block1.index = 10
+
+        //serialise it
+
+        const blockStr = block1.serialize()
+
+        //build a message
+
+        const addBlockMessage = new Message({peer:"127.0.0.1:4000", action:"addblock", data: blockStr})
+
+        //process the received message
+        peer.processReceivedMessage(addBlockMessage)
+        .catch((error) => {
+          expect(error).to.eql("block is invalid")
+           peer.repository.deleteCollection('blocks').then(() => { //cleanup
+              peer.repository.deleteCollection("transactionpool").then(()=> {
+                done()
+              })
+            })
+        })
+
+        
+
+      })
+
+
+
+      
+    })
+
+
+  })
+  
+  it("should process a received 'addblock' message, throwing an error if the received block index is <= latest block index", (done) => {
+    const peer = new Peer('http://localhost',3000, 3001, new Repository(Levelupdb))
+    peer.createCollections().then(() => {
+
+       //add an origin block
+      const originBlock = new Block({"previousHash": "-1", "transactions":[],"index":0})
+      //save to the database
+      peer.repository.addBlock(originBlock).then(result => {
+        //set up the blockchain object
+        const blockchain = new Blockchain({"latestblockid": originBlock.id, "latestblockindex": originBlock.index, "length":1})
+        peer.setBlockchain(blockchain)
+        
+        //build a Block
+        const transactions1 = [
+        
+        ]
+        transactions1.push(new Transaction({'consignmentid':'cabcdefg','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+        transactions1.push(new Transaction({'consignmentid':'cabcdefh','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+        transactions1.push(new Transaction({'consignmentid':'cabcdefi','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+        
+        const block1 = new Block({"previousHash":"abcdef","transactions":transactions1, "index":-1})
+
+       
+
+        //serialise it
+
+        const blockStr = block1.serialize()
+
+        //build a message
+
+        const addBlockMessage = new Message({peer:"127.0.0.1:4000", action:"addblock", data: blockStr})
+
+        //process the received message
+        peer.processReceivedMessage(addBlockMessage)
+        .catch((error) => {
+          expect(error).to.eql("block index less than or equal to latest")
+           peer.repository.deleteCollection('blocks').then(() => { //cleanup
+              peer.repository.deleteCollection("transactionpool").then(()=> {
+                done()
+              })
+            })
+        })
+
+        
+
+      })
+
+
+
+      
+    })
+
+
+  })
+
+  it("should process a received 'addblock' message, throwing an error if the received block previousHash is not the hash of the latest block", (done) => {
+    const peer = new Peer('http://localhost',3000, 3001, new Repository(Levelupdb))
+    peer.createCollections().then(() => {
+
+       //add an origin block
+      const originBlock = new Block({"previousHash": "-1", "transactions":[],"index":0})
+      //save to the database
+      peer.repository.addBlock(originBlock).then(result => {
+        //set up the blockchain object
+        const blockchain = new Blockchain({"latestblockid": originBlock.id, "latestblockindex": originBlock.index, "length":1})
+        peer.setBlockchain(blockchain)
+        
+        //build a Block
+        const transactions1 = [
+        
+        ]
+        transactions1.push(new Transaction({'consignmentid':'cabcdefg','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+        transactions1.push(new Transaction({'consignmentid':'cabcdefh','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+        transactions1.push(new Transaction({'consignmentid':'cabcdefi','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+        
+        const block1 = new Block({"previousHash":"abcdef","transactions":transactions1, "index":1})
+
+       
+
+        //serialise it
+
+        const blockStr = block1.serialize()
+
+        //build a message
+
+        const addBlockMessage = new Message({peer:"127.0.0.1:4000", action:"addblock", data: blockStr})
+
+        //process the received message
+        peer.processReceivedMessage(addBlockMessage)
+        .catch((error) => {
+          expect(error).to.eql("block previousHash not hash of latest block")
+           peer.repository.deleteCollection('blocks').then(() => { //cleanup
+              peer.repository.deleteCollection("transactionpool").then(()=> {
+                done()
+              })
+            })
+        })
+
+        
+
+      })
+
+
+
+      
+    })
+
+
+  })
+
+  it("should process a received 'addblock' message, throwing an error if the received block index is greater than that of the next block. Should broadcast a 'sendblocks' message and change peer status", (done) => {
+    const peer = new Peer('http://localhost',3000, 3001, new Repository(Levelupdb))
+    peer.createCollections().then(() => {
+
+       //add an origin block
+      const originBlock = new Block({"previousHash": "-1", "transactions":[],"index":0})
+      //save to the database
+      peer.repository.addBlock(originBlock).then(result => {
+        //set up the blockchain object
+        const blockchain = new Blockchain({"latestblockid": originBlock.id, "latestblockindex": originBlock.index, "length":1})
+        peer.setBlockchain(blockchain)
+        
+        //build a Block
+        const transactions1 = [
+        
+        ]
+        transactions1.push(new Transaction({'consignmentid':'cabcdefg','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+        transactions1.push(new Transaction({'consignmentid':'cabcdefh','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+        transactions1.push(new Transaction({'consignmentid':'cabcdefi','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+        
+        const block1 = new Block({"previousHash":"abcdef","transactions":transactions1, "index":2})
+
+       
+
+        //serialise it
+
+        const blockStr = block1.serialize()
+
+        //build a message
+
+        const addBlockMessage = new Message({peer:"127.0.0.1:4000", action:"addblock", data: blockStr})
+
+        const peerSpy = sinon.stub(peer, "broadcastMessage").callsFake(() => { return(true)})
+        //process the received message
+        peer.processReceivedMessage(addBlockMessage)
+        .catch((error) => {
+          expect(error).to.eql("block index greater than next index")
+          expect(peer.getState()).to.eql("awaitingblockchain")
+          expect(peerSpy.called).to.be.true
+          expect(peerSpy.callCount).to.equal(1)
+          expect(peerSpy.calledWith("sendblocks")).to.be.true
+           peer.repository.deleteCollection('blocks').then(() => { //cleanup
+              peer.repository.deleteCollection("transactionpool").then(()=> {
+                done()
+              })
+            })
+        })
+
+        
+
+      })
+
+
+
+      
+    })
+
+
+  })
+
+   it("should process a received 'addblock' message", (done) => {
+    const peer = new Peer('http://localhost',3000, 3001, new Repository(Levelupdb))
+    peer.createCollections().then(() => {
+
+       //add an origin block
+      const originBlock = new Block({"previousHash": "-1", "transactions":[],"index":0})
+      //save to the database
+      peer.repository.addBlock(originBlock).then(result => {
+        //set up the blockchain object
+        const blockchain = new Blockchain({"latestblockid": originBlock.id, "latestblockindex": originBlock.index, "length":1})
+        peer.setBlockchain(blockchain)
+        
+        //build a Block
+        const transactions1 = [
+        
+        ]
+        transactions1.push(new Transaction({'consignmentid':'cabcdefg','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+        transactions1.push(new Transaction({'consignmentid':'cabcdefh','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+        transactions1.push(new Transaction({'consignmentid':'cabcdefi','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+        
+        const block1 = new Block({"previousHash":originBlock.id,"transactions":transactions1, "index":1})
+
+       
+
+        //serialise it
+
+        const blockStr = block1.serialize()
+
+        //build a message
+
+        const addBlockMessage = new Message({peer:"127.0.0.1:4000", action:"addblock", data: blockStr})
+
+        const peerSpy = sinon.stub(peer, "broadcastMessage").callsFake(() => { return(true)})
+        //process the received message
+        peer.processReceivedMessage(addBlockMessage)
+        .then((resultingBlock) => {
+          expect(resultingBlock).to.be.instanceof(Block)
+          expect(peer.blockchain.getLatestBlockId()).to.eql(resultingBlock.id)
+          expect(peer.blockchain.getLatestBlockIndex()).to.eql(resultingBlock.index)
+          expect(peer.blockchain.getLength()).to.eql(2)
+          //should be in the database
+          peer.repository.getBlock(resultingBlock.id)
+          .then((dbBlock) => {
+            expect(dbBlock.id).to.eql(resultingBlock.id) //it's found
+            peer.repository.deleteCollection('blocks').then(() => { //cleanup
+              peer.repository.deleteCollection("transactionpool").then(()=> {
+                done()
+              })
+            })
+          })
+          
+        })
+      
+
+        
+
+      })
+
+
+
+      
+    })
+
+
+  })
+
+  it("should process an incoming 'addtransaction' message, throwing an error if the data not a transaction", (done) => {
+    const peer = new Peer('http://localhost',3000, 3001, new Repository(Levelupdb))
+    peer.createCollections().then(() => {
+      
+
+      const addTransactionMessage = new Message({peer:"127.0.0.1:4000", action:"addtransaction", data: "{\"some\":\"data\"}"})
+
+       peer.processReceivedMessage(addTransactionMessage)
+        .catch((error) => {
+
+          expect(error).to.exist
+
+          peer.repository.deleteCollection('blocks').then(() => { //cleanup
+            peer.repository.deleteCollection("transactionpool").then(()=> {
+              done()
+            })
+          })
+
+        })
+
+      
+
+    })
+
+  })
+
+  it("should process an incoming 'addtransaction' message, throwing an error if the data is an invalid transaction", (done) => {
+    const peer = new Peer('http://localhost',3000, 3001, new Repository(Levelupdb))
+    peer.createCollections().then(() => {
+      //create a transaction
+      const transaction = new Transaction({'consignmentid':'cabcdefg','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey})
+      //invalidate it
+      transaction.consignmentid = 'cabcdefh'
+      //serialize it
+      const tStr = transaction.serialize()
+
+      //create the message
+
+      const addTransactionMessage = new Message({peer:"127.0.0.1:4000", action:"addtransaction", data: tStr})
+
+       peer.processReceivedMessage(addTransactionMessage)
+        .catch((error) => {
+
+          expect(error).to.eql("transaction is invalid")
+
+          peer.repository.deleteCollection('blocks').then(() => { //cleanup
+            peer.repository.deleteCollection("transactionpool").then(()=> {
+              done()
+            })
+          })
+
+        })
+
+      
+
+    })
+
+  })
+
+
+  it("should process an incoming 'addtransaction' message", (done) => {
+    const peer = new Peer('http://localhost',3000, 3001, new Repository(Levelupdb))
+    peer.createCollections().then(() => {
+      //create a transaction
+      const transaction = new Transaction({'consignmentid':'cabcdefg','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey})
+    
+      const tid = transaction.id
+      //serialize it
+      const tStr = transaction.serialize()
+
+      //create the message
+
+      const addTransactionMessage = new Message({peer:"127.0.0.1:4000", action:"addtransaction", data: tStr})
+
+       peer.processReceivedMessage(addTransactionMessage)
+        .then((result) => {
+          expect(result).to.be.instanceof(Transaction)
+    
+          //it should now be in the repository
+          peer.repository.getTransaction(result.id)
+          .then((trans) => {
+            expect(trans.id).to.eql(result.id)
+            //cleanup
+            peer.repository.deleteCollection('blocks').then(() => { //cleanup
+              peer.repository.deleteCollection("transactionpool").then(()=> {
+                done()
+              })
+            })
+            
+          })
+
+          
+        })
+
+      
+
+    })
+
   })
 })
 

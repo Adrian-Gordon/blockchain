@@ -233,7 +233,7 @@ describe("blocks", () => {
       transactions.push(new Transaction({'consignmentid':'cabcdefh','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
       transactions.push(new Transaction({'consignmentid':'cabcdefi','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
       
-      const block = new Block({"previousHash":"abcdef","transactions":transactions})
+      const block = new Block({"previousHash":"abcdef","transactions":transactions,"index": 1})
 
       const blockid = block.id
 
@@ -259,7 +259,7 @@ describe("blocks", () => {
       transactions.push(new Transaction({'consignmentid':'cabcdefh','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
       transactions.push(new Transaction({'consignmentid':'cabcdefi','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
       
-      const block = new Block({"previousHash":"abcdef","transactions":transactions})
+      const block = new Block({"previousHash":"abcdef","transactions":transactions,"index":1})
 
       const blockid = block.id
 
@@ -292,7 +292,7 @@ describe("blocks", () => {
       transactions.push(new Transaction({'consignmentid':'cabcdefh','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
       transactions.push(new Transaction({'consignmentid':'cabcdefi','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
       
-      const block = new Block({"previousHash":"abcdef","transactions":transactions})
+      const block = new Block({"previousHash":"abcdef","transactions":transactions,"index": 1})
 
       const blockid = block.id
 
@@ -318,7 +318,7 @@ describe("blocks", () => {
       transactions.push(new Transaction({'consignmentid':'cabcdefh','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
       transactions.push(new Transaction({'consignmentid':'cabcdefi','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
       
-      const block = new Block({"previousHash":"abcdef","transactions":transactions})
+      const block = new Block({"previousHash":"abcdef","transactions":transactions, "index":1})
 
       const blockid = block.id
       block.previousHash = "abcdeg"
@@ -344,7 +344,7 @@ describe("blocks", () => {
       transactions1.push(new Transaction({'consignmentid':'cabcdefh','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
       transactions1.push(new Transaction({'consignmentid':'cabcdefi','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
       
-      const block1 = new Block({"previousHash":"abcdef","transactions":transactions1})
+      const block1 = new Block({"previousHash":"abcdef","transactions":transactions1,"index":1})
 
       const transactions2 = [
         
@@ -353,7 +353,7 @@ describe("blocks", () => {
       transactions2.push(new Transaction({'consignmentid':'cabcdefh','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
       transactions2.push(new Transaction({'consignmentid':'cabcdefi','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
       
-      const block2 = new Block({"previousHash":block1.id,"transactions":transactions2})
+      const block2 = new Block({"previousHash":block1.id,"transactions":transactions2, "index": 2})
 
       const transactions3 = [
         
@@ -362,7 +362,7 @@ describe("blocks", () => {
       transactions3.push(new Transaction({'consignmentid':'cabcdefh','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
       transactions3.push(new Transaction({'consignmentid':'cabcdefi','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
       
-      const block3 = new Block({"previousHash":block2.id,"transactions":transactions3})
+      const block3 = new Block({"previousHash":block2.id,"transactions":transactions3,"index": 3})
 
       const blocks = [block1, block2, block3]
 

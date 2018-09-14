@@ -10,6 +10,8 @@ const topology = require('fully-connected-topology')
 
 const logger = require('../../logger/logger.js')(module)
 
+const validStates = ["running","awaitingblockchain"]
+
 
 class Peer {
   constructor(discoveryServerUrl, discoveryServerPort, port, repository){
@@ -41,7 +43,18 @@ class Peer {
     this.repository = repository
     this.messageQueue = []
     this.blockchain = null
+    this.state = "running"
 
+  }
+
+  setState(state){
+    if(validStates.includes(state))
+      this.state = state
+    else throw new Error("invalid state: '" + state + "'")
+  }
+
+  getState(){
+    return(this.state)
   }
 
   getPeers(){
@@ -116,6 +129,60 @@ class Peer {
 
   getStatus(){
     return({status:'OK', uptime:(new Date().getTime() - this.startTime)})
+  }
+
+  addBlock(block){
+    return new Promise((resolve, reject) => {
+      if(!(block instanceof Block)){
+        reject("block must be of class Block")
+      }
+      if(!Block.validate(block)){
+        reject("block is invalid")
+      }
+      if(block.index <= this.blockchain.getLatestBlockIndex())
+        reject("block index less than or equal to latest")
+      if((block.index - this.blockchain.getLatestBlockIndex())> 1)
+        reject("block index greater than next index")
+      if(block.previousHash !== this.blockchain.getLatestBlockId())
+        reject("block previousHash not hash of latest block")
+
+      this.repository.addBlock(block).then(result => {
+        if(result == 'OK'){
+          this.blockchain.setLatestBlockId(block.id)
+          this.blockchain.setLatestBlockIndex(block.index)
+          this.blockchain.incrementLength()
+          resolve(block)
+        }
+        else{
+          reject(result)
+        }
+      })
+    })
+
+    
+  }
+
+  addTransaction(transaction){
+    return new Promise((resolve, reject) => {
+      if(!(transaction instanceof Transaction)){
+        reject("transaction must be of class Transaction")
+      }
+      if(!Transaction.validate(transaction)){
+        reject("transaction is invalid")
+      }
+
+      this.repository.addTransaction(transaction)
+      .then((result) => {
+        if(result == 'OK'){
+          resolve(transaction)
+        }
+        else{
+          reject(result)
+        }
+      })
+
+    })
+
   }
 
   setupPeerNetwork(port){
@@ -198,7 +265,8 @@ class Peer {
       }
       else if(message.action == "sendblocks"){     //serialise the blockchain out of the repository, and send it on to the requestor
         
-        const blockchain = this.repository.getAllBlocks().then(blocksArray => {
+        const blockchain = this.repository.getAllBlocks()
+        .then(blocksArray => {
           
           const blocksStringArray = blocksArray.map(block => { return block.serialize()})
           
@@ -212,7 +280,50 @@ class Peer {
         
 
       }
+      else if(message.action == "addblock"){
+        
+
+        //it should be a block
+        try{
+          const block = Block.deserialize(message.data)
+          this.addBlock(block)
+          .then((result) => {
+            resolve(result)
+          })
+          .catch((error) => {
+            if(error == "block index greater than next index"){
+              this.setState("awaitingblockchain")
+              this.broadcastMessage("sendblocks")
+              reject(error)
+            }
+            reject(error)
+          })
+        }catch(error){
+          reject(error.message)
+        }
+
+      }
+      else if(message.action == "addtransaction"){
+        try{
+          const transaction = Transaction.deserialize(message.data)
+          this.addTransaction(transaction)
+          .then((result) => {
+            resolve(result)
+          })
+          .catch((error) => {
+            reject(error)
+          })
+
+        }catch(error){
+          reject(error.message)
+        }
+
+      }
     })
+  }
+
+  broadcastMessage(action){
+
   }
 
   sendMessage(peer, action, data){
@@ -243,5 +354,5 @@ t3.on('connection', function(connection, peer) {
 });
 */
 
-module.exports = Object.assign({},{Peer})
+module.exports = Object.assign({},{Peer,validStates})
 

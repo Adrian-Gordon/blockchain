@@ -1,43 +1,28 @@
 'use strict'
 
 class Blockchain{
-  constructor({length, latestblockid}){
+  constructor({length, latestblockid, latestblockindex}){
 
-    if(typeof length !== 'undefined'){
-      if(typeof length !== 'number'){
-        throw new Error("length must be a number")
-      }
-      else{
-        this.length=parseInt(length)
-      }
+    if(typeof length =='undefined' || typeof latestblockid == 'undefined' || typeof latestblockindex == 'undefined' ){
+      throw new Error("length, letsetblockid and latestblockindex must be provided")
     }
 
-    if(typeof latestblockid !== 'undefined'){
-      if(typeof latestblockid !== 'string'){
-        throw new Error("latestblockid must be a string")
-      }
-      else{
-        this.length=parseInt(length)
-      }
+    if(!Number.isInteger(length)){
+      throw new Error("length must be an integer")
     }
 
-     if(typeof length !== 'undefined'){
-      if(typeof latestblockid == 'undefined'){
-        throw new Error("both length and latest block id must be provided for a de-serialised Blockchain")
-      }
+    if(!Number.isInteger(latestblockindex)){
+      throw new Error("latestblockindex must be an integer")
     }
-    if(typeof length !== 'undefined'){
-      if(typeof latestblockid == 'undefined'){
-         throw new Error("both length and latest block id must be provided for a de-serialised Blockchain")
-      }
-    }
-    if(typeof length !== "undefined")
-      this.length = parseInt(length)
-    else this.length = 0
 
-    if(typeof latestblockid !== "undefined"){
-      this.latestblockid = latestblockid
+    if(typeof latestblockid !== 'string'){
+      throw new Error("latestblockid must be a string")
     }
+
+    this.length = length
+    this.latestblockid = latestblockid
+    this.latestblockindex = latestblockindex
+    
     return this
   }
 
@@ -55,8 +40,24 @@ class Blockchain{
   }
 
   setLatestBlockId(blockId){
+    if(typeof blockId !== "string"){
+      throw new Error("blockId should be a string")
+    }
     this.latestblockid = blockId
     return this.latestblockid
+  }
+
+  getLatestBlockIndex(){
+    return this.latestblockindex
+  }
+
+  setLatestBlockIndex(index){
+    if(!Number.isInteger(index))
+      throw new Error("index should be an integer")
+    else {
+      this.latestblockindex = index
+      return this.latestblockindex
+    }
   }
 
   serialize(){

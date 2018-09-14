@@ -9,7 +9,15 @@ class Block{
   /*timestamp and id should be provided for a de-serialised Block*/
   /*if they re provided, transactions should be a string*/
   /*If id and timestamp are not provided, transactions should be an array of Transactions*/
-  constructor({previousHash, transactions, timestamp, id}){
+  constructor({index, previousHash, transactions, timestamp, id}){
+
+    //index must always be provided, and must be a number
+    if(typeof index == 'undefined'){
+      throw new Error("index must be provided")
+    }
+    else if(!Number.isInteger(index)){
+      throw new Error("index must be an integer")
+    }
 
     //previous hash must always be provided, and must be a string
     if(typeof previousHash == 'undefined'){
@@ -40,7 +48,7 @@ class Block{
       if(typeof transactions !== 'string'){
         throw new Error("transactions must be stringified for a de-serialised Block")
       }
-
+      this.index = index
       this.timestamp = timestamp
       this.previousHash = previousHash
       this.transactions = transactions
@@ -50,13 +58,13 @@ class Block{
       if(!Array.isArray(transactions)){
          throw new Error('transactions must be an array')
       }
-      if(transactions.length == 0){
-        throw new Error('transactions must be a non-empty array')
-      }
+     // if(transactions.length == 0){
+     //   throw new Error('transactions must be a non-empty array')
+     // }
       let transactionsArray =[]
       for(let i=0; i< transactions.length; i++){
         if(transactions[i] instanceof Transaction);
-        else throw new Error("transactions must be a non-empty array of Transaction class objects")
+        else throw new Error("transactions must of class Transaction")
 
         if(!Transaction.validate(transactions[i]))
           throw new Error("Transaction " + i + " is not valid")
@@ -66,7 +74,9 @@ class Block{
       this.timestamp = Math.round((new Date().getTime()/1000))
       this.previousHash = previousHash
       this.transactions = JSON.stringify(transactionsArray)
+      this.index = index
       this.id =  Block.createHash(this)
+
     }
 
     //Final validation
@@ -82,6 +92,7 @@ class Block{
   }
 
   static deserialize(str){
+
     const obj = JSON.parse(str)
   
     return new Block(obj)
@@ -89,12 +100,12 @@ class Block{
   }
 
   static createHash(block){
-    return crypto.createHash(nconf.get('hashalgorithm')).update(block.previousHash + block.timestamp + block.transactions).digest('hex')
+    return crypto.createHash(nconf.get('hashalgorithm')).update("" + block.index + block.previousHash + block.timestamp + block.transactions).digest('hex')
 
   }
 
   static validate(block){
-    const hash = crypto.createHash(nconf.get('hashalgorithm')).update(block.previousHash + block.timestamp + block.transactions).digest('hex')
+    const hash = crypto.createHash(nconf.get('hashalgorithm')).update("" + block.index + block.previousHash + block.timestamp + block.transactions).digest('hex')
   
     if(hash === block.id)return true
     return false
