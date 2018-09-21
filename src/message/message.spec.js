@@ -36,7 +36,7 @@ describe('Message', ()=> {
 
 
 
-  it("instantiates a message", (done) => {
+  it("instantiates a message with no provided type, defaults to 'broadcast'", (done) => {
     const message = new Message({peer:"A Peer", action:"ping", data: "some data"})
     expect(message).to.be.instanceof(Message)
     expect(message.peer).to.be.a('string')
@@ -45,7 +45,40 @@ describe('Message', ()=> {
     expect(message.action).to.be.eql("ping")
      expect(message.data).to.be.a('string')
     expect(message.data).to.be.eql("some data")
+    expect(message.type).to.be.eql('broadcast')
 
+    done()
+  })
+
+  it("instantiates a private message ", (done) => {
+    const message = new Message({peer:"A Peer", action:"ping", data: "some data",type:'private'})
+    expect(message).to.be.instanceof(Message)
+    expect(message.peer).to.be.a('string')
+    expect(message.peer).to.be.eql("A Peer")
+     expect(message.action).to.be.a('string')
+    expect(message.action).to.be.eql("ping")
+     expect(message.data).to.be.a('string')
+    expect(message.data).to.be.eql("some data")
+    expect(message.type).to.be.eql('private')
+
+    done()
+  })
+  it("instantiates a broadcast message ", (done) => {
+    const message = new Message({peer:"A Peer", action:"ping", data: "some data",type:'broadcast'})
+    expect(message).to.be.instanceof(Message)
+    expect(message.peer).to.be.a('string')
+    expect(message.peer).to.be.eql("A Peer")
+     expect(message.action).to.be.a('string')
+    expect(message.action).to.be.eql("ping")
+     expect(message.data).to.be.a('string')
+    expect(message.data).to.be.eql("some data")
+    expect(message.type).to.be.eql('broadcast')
+
+    done()
+  })
+
+   it('throws an error if an invalid type is provided', (done) => {
+     assert.throws(() =>  new Message({peer:"A Peer", action:"ping", data: "some data",type:'broadycast'}),Error,"type must be 'private' or 'broadcast'")
     done()
   })
 

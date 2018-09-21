@@ -7,14 +7,16 @@ const Block = require('../../block/block').Block
 const Message = require('../../message/message').Message
 const Blockchain = require('../../blockchain/blockchain').Blockchain
 const topology = require('fully-connected-topology')
+const jsonStream = require('duplex-json-stream')
 
 const logger = require('../../logger/logger.js')(module)
 
 const validStates = ["running","awaitingblockchain"]
 
 
+
 class Peer {
-  constructor(discoveryServerUrl, discoveryServerPort, port, repository){
+  constructor(discoveryServerUrl, discoveryServerPort,discoveryServerMessagePort, port, repository){
 
     if(typeof discoveryServerUrl == 'undefined'){
       throw new Error("no discovery server URL provided")
@@ -24,6 +26,12 @@ class Peer {
     }
     if(isNaN(parseInt(discoveryServerPort))){
       throw new Error("invalid discovery server port: '" + discoveryServerPort + "'")
+    }
+     if(typeof discoveryServerMessagePort == 'undefined'){
+      throw new Error("no discovery server message port provided")
+    }
+    if(isNaN(parseInt(discoveryServerMessagePort))){
+      throw new Error("invalid discovery server message port: '" + discoveryServerMessagePort + "'")
     }
     if(typeof port == 'undefined'){
       throw new Error("no peer port provided")
@@ -38,12 +46,15 @@ class Peer {
 
     this.discoveryServerUrl = discoveryServerUrl
     this.discoveryServerPort = parseInt(discoveryServerPort)
+    this.discoveryServerMessagePort = parseInt(discoveryServerMessagePort)
+
     this.port = port
     this.startTime = new Date().getTime()
     this.repository = repository
     this.messageQueue = []
     this.blockchain = null
     this.state = "running"
+    this.connectedPeers = new Object()
 
   }
 
@@ -58,7 +69,7 @@ class Peer {
   }
 
   getPeers(){
-    const peersUrl = this.discoveryServerUrl + ":" + this.discoveryServerPort + "/activeNodes"
+    const peersUrl = "http://" + this.discoveryServerUrl + ":" + this.discoveryServerPort + "/activeNodes"
     return new Promise((resolve, reject) => {
       request(peersUrl)
       .then((peers)=> {
@@ -105,7 +116,7 @@ class Peer {
   }
 
   registerAsPeer(){
-    const addPeerUrl = this.discoveryServerUrl + ":" + this.discoveryServerPort + "/activeNodes"
+    const addPeerUrl = "http://" + this.discoveryServerUrl + ":" + this.discoveryServerPort + "/activeNodes"
     return new Promise((resolve, reject) => {
       const options = {
         uri: addPeerUrl,
@@ -186,6 +197,7 @@ class Peer {
   }
 
   setupPeerNetwork(port){
+    //console.log("setupPeerNetwork " + port)
     return new Promise((resolve, reject) => {
 
 
@@ -209,8 +221,9 @@ class Peer {
             }).filter(value => {
                return typeof value !== 'undefined'
             })
+            peersRefs.push(this.discoveryServerUrl + ":" + this.discoveryServerMessagePort) //push the discovery server as peer
             peer.topology = topology("127.0.0.1:" + this.port, peersRefs)
-            peer.topology.on('connection', this.connectionCallback)
+            peer.topology.on('connection', this.connectionCallback.bind(this))
             //console.log(peer.topology)
             //console.log(this)
             resolve(true)
@@ -226,9 +239,36 @@ class Peer {
   }
 
   connectionCallback(connection, peer){
-    console.log("connected to " + peer)
+    const socket = jsonStream(connection)
+    socket.on('data', (data) => {
+      try{
+          data.peer = peer //add peer to message
+          const message = new Message(data)
+          this.pushMessage(message)
+
+      }catch(error){
+        logger.error(error)
+
+      }
+
+    })
+    socket.on('end', () => {
+      //console.log(this.port + "disconnected from" + peer)
+      delete this.connectedPeers[peer]
+    })
+    this.connectedPeers[peer] = socket
+    console.log(this.port + " connected to " + peer)
     return(true)
     
+  }
+
+  endConnection(connectionid){
+    const peer = this.connectedPeers[connectionid]
+
+    if(!peer)throw new Error("no connection to peer: '" + connectionid+ "'")
+
+    this.connectedPeers[connectionid].end()
+    delete this.connectedPeers[connectionid]
   }
 
   pushMessage(message){
@@ -322,11 +362,20 @@ class Peer {
     })
   }
 
-  broadcastMessage(action){
+  broadcastMessage(action, data){
+    Object.keys(this.connectedPeers).forEach((peer) => {
+      this.sendMessage(peer, action, data, 'broadcast')
+    })
 
   }
 
-  sendMessage(peer, action, data){
+  sendMessage(peer, action, data, type){
+    if(typeof type == 'undefined') type = 'private'
+    const socket = this.connectedPeers[peer]
+
+    if(!socket)throw new Error("no connection to peer: '" + peer+ "'")
+
+    socket.write({'action': action, 'data': data, 'type': type})
 
   }
 

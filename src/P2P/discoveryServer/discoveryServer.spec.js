@@ -9,14 +9,15 @@ describe('Discovery Server', () => {
   let app = null
   beforeEach((done) => {
     
-     server.startServer(3000).then(serv => {
+     server.startServer(3000, 3001).then(serv => {
+      
       app = serv
       done()
     })
   })
 
   afterEach((done) => {
-    
+      server.getSwarm().destroy()
       app.close()
       app = null
       done()
@@ -66,6 +67,29 @@ describe('Discovery Server', () => {
       res.body.port.should.eql(5000)
     })
     .expect(201, done)
+  })
+
+  it('gets P2P nodes', (done) => {
+    request(app)
+    .post('/activeNodes')
+    .send({
+      'port': 5000
+    })
+    .set('Content-Type','application/json')
+    .set('Accept','aplication/json')
+    .expect(201)
+    .then(() => {
+      request(app)
+      .get('/activeNodes')
+      .expect(200)
+      .then(response => {
+        
+        response.body["::ffff:127.0.0.1"][0].should.eql(5000)
+        done()
+
+      })
+
+    })
   })
 
   it('returns a bad request code when no port is specified in a DELETE', (done) => {

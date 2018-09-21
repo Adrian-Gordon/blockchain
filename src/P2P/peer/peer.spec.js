@@ -56,31 +56,43 @@ describe('Peer Instantiation', () => {
   })
 
   it("throws an error if no discovery server port is provided", (done) => {
-    const fcn = function() {new Peer('http://discoverserver/url')}
+    const fcn = function() {new Peer('discovery.server.url')}
     expect(fcn).to.throw(Error, "no discovery server port provided")
     done()
   })
 
   it("throws an error if an invalid discovery server port is provided", (done) => {
-    const fcn = function() {new Peer('http://discoverserver/url','aportno')}
+    const fcn = function() {new Peer('discovery.server.url','aportno')}
     expect(fcn).to.throw(Error, "invalid discovery server port: 'aportno'")
     done()
   })
 
+  it("throws an error if no discovery server message port is provided", (done) => {
+    const fcn = function() {new Peer('discovery.server.url',3000)}
+    expect(fcn).to.throw(Error, "no discovery server message port provided")
+    done()
+  })
+
+  it("throws an error if an invalid discovery server message port is provided", (done) => {
+    const fcn = function() {new Peer('discovery.server.url',3000,'aportno')}
+    expect(fcn).to.throw(Error, "invalid discovery server message port: 'aportno'")
+    done()
+  })
+
   it("throws an error if no peer port is provided", (done) => {
-    const fcn = function() {new Peer('http://discoverserver/url',3000)}
+    const fcn = function() {new Peer('discovery.server.url',3000, 3001)}
     expect(fcn).to.throw(Error, "no peer port provided")
     done()
   })
 
   it("throws an error if an invalid peer port is provided", (done) => {
-    const fcn = function() {new Peer('http://discoverserver/url',3000, 'aportno')}
+    const fcn = function() {new Peer('discovery.server.url',3000,3001, 'aportno')}
     expect(fcn).to.throw(Error, "invalid peer port: 'aportno'")
     done()
   })
 
   it("throws an error if no repository is provided", (done) => {
-    expect(() => new Peer('http://localhost',3000, 3001)).to.throw(Error,'no repository provided')
+    expect(() => new Peer('discovery.server.url',3000, 3001, 3002)).to.throw(Error,'no repository provided')
 
     done()
   })
@@ -88,12 +100,13 @@ describe('Peer Instantiation', () => {
   
 
   it("instantiates a Peer", (done) => {
-    const peer = new Peer('http://localhost',3000, 3001, new Repository(Levelupdb))
+    const peer = new Peer('127.0.0.1',3000, 3001, 3002, new Repository(Levelupdb))
     expect(peer).to.be.instanceof(Peer)
     peer.should.be.instanceof(Peer)
-    peer.discoveryServerUrl.should.eql("http://localhost")
+    peer.discoveryServerUrl.should.eql("127.0.0.1")
     peer.discoveryServerPort.should.eql(3000)
-    peer.port.should.eql(3001)
+    peer.discoveryServerMessagePort.should.eql(3001)
+    peer.port.should.eql(3002)
     expect(peer.startTime).to.be.a('number')
     peer.startTime.should.be.a('number')
     peer.repository.should.be.instanceof(Repository)
@@ -104,26 +117,26 @@ describe('Peer Instantiation', () => {
   })
 
   it("throws an error if setting a peer state to an invalid state", (done) =>{
-    const peer = new Peer('http://localhost',3000, 3001, new Repository(Levelupdb))
+    const peer = new Peer("127.0.0.1",3000, 3001, 3002,new Repository(Levelupdb))
     expect(() => peer.setState("somestate")).to.throw("invalid state: 'somestate'")
     done()
   })
 
   it("gets a peer state", (done) =>{
-    const peer = new Peer('http://localhost',3000, 3001, new Repository(Levelupdb))
+    const peer = new Peer("127.0.0.1",3000, 3001, 3002, new Repository(Levelupdb))
     expect(peer.state).to.eql("running")
     done()
   })
 
   it("sets a peer state", (done) =>{
-    const peer = new Peer('http://localhost',3000, 3001, new Repository(Levelupdb))
+    const peer = new Peer("127.0.0.1",3000, 3001, 3002,new Repository(Levelupdb))
     peer.setState("awaitingblockchain")
     expect(peer.getState()).to.eql("awaitingblockchain")
     done()
   })
 
   it("creates peer's repository collections", (done) => {
-    const peer = new Peer('http://localhost',3000, 3001, new Repository(Levelupdb))
+    const peer = new Peer("127.0.0.1",3000, 3001, 3002, new Repository(Levelupdb))
     peer.createCollections()
     .then(() => {
        Levelupdb.collections.should.have.property('transactionpool')
@@ -135,13 +148,13 @@ describe('Peer Instantiation', () => {
   })
 
   it("throws an error if setBlockchain is called with an argument that is not of class Blockchain", (done) => {
-    const peer = new Peer('http://localhost',3000, 3001, new Repository(Levelupdb))
+    const peer = new Peer("127.0.0.1",3000, 3001,3002, new Repository(Levelupdb))
     expect(() => peer.setBlockchain("a string")).to.throw("setBlockchain must take an argument of type Blockchain")
     done()
   })
 
   it("sets the blockchain property of a peer", (done) => {
-    const peer = new Peer('http://localhost',3000, 3001, new Repository(Levelupdb))
+    const peer = new Peer("127.0.0.1",3000, 3001, 3002, new Repository(Levelupdb))
     const blockchain = new Blockchain({"length": 10, "latestblockid": "abcdef","latestblockindex":10})
     peer.setBlockchain(blockchain)
     expect(peer.blockchain).to.eql(blockchain)
@@ -149,7 +162,7 @@ describe('Peer Instantiation', () => {
   })
 
   it("gets the blockchain property of the peer", (done) => {
-    const peer = new Peer('http://localhost',3000, 3001, new Repository(Levelupdb))
+    const peer = new Peer("127.0.0.1",3000, 3001, 3002, new Repository(Levelupdb))
     const blockchain = new Blockchain({"length": 10, "latestblockid": "abcdef","latestblockindex":20})
     peer.setBlockchain(blockchain)
     expect(peer.getBlockchain()).to.be.instanceof(Blockchain)
@@ -157,7 +170,7 @@ describe('Peer Instantiation', () => {
   })
 
   it("throws and error if the peer cannot retrieve a list of peers from the discovery server", (done) => {
-    const peer = new Peer('http://localhost',3000, 3001, new Repository(Levelupdb))
+    const peer = new Peer("127.0.0.1",3000, 3001, 3002,new Repository(Levelupdb))
 
     peer.getPeers().catch((error) => {
       error.should.eql("cannot retrieve list of peers from discovery server")
@@ -178,23 +191,23 @@ describe('Peer Connectivity', () => {
   let app = null
   before((done) => {
     
-     discoveryServer.startServer(3000).then(serv => {
+     discoveryServer.startServer(3000, 3001).then(serv => {
       app = serv
       done()
     })
   })
 
   after((done) => {
-    
+      discoveryServer.getSwarm().destroy()
       app.close()
       app = null
       done()
       
     
   })
-
+/*
   it("gets a list of peers from the discovery server", (done) => {
-    const peer = new Peer('http://localhost',3000, 3001, new Repository(Levelupdb))
+    const peer = new Peer("127.0.0.1",3000, 3002, new Repository(Levelupdb))
 
     peer.getPeers().then((peers) => {
       peers.should.be.instanceof(Object)
@@ -204,9 +217,9 @@ describe('Peer Connectivity', () => {
   })
 
   it("registers as a peer", (done) => {
-    const peer = new Peer('http://localhost',3000, 3001, new Repository(Levelupdb))
+    const peer = new Peer("127.0.0.1",3000, 3002, new Repository(Levelupdb))
     peer.registerAsPeer().then((result) => {
-      result.port.should.eql(3001)
+      result.port.should.eql(3002)
       done()
     })
     .catch((error) => {
@@ -216,7 +229,7 @@ describe('Peer Connectivity', () => {
   })
 
   it("returns a peer's status", (done) => {
-    const peer = new Peer('http://localhost',3000, 3001, new Repository(Levelupdb))
+    const peer = new Peer("127.0.0.1",3000, 3002, new Repository(Levelupdb))
 
     const status = peer.getStatus()
     status.status.should.eql('OK')
@@ -228,40 +241,30 @@ describe('Peer Connectivity', () => {
   })
 
   it("sets up peer network", (done) => {
-    const peer1 = new Peer('http://localhost',3000, 3001, new Repository(Levelupdb))
-    const peer2 = new Peer('http://localhost',3000, 3002, new Repository(Levelupdb))
+    const peer1 = new Peer("127.0.0.1",3000, 3002, new Repository(Levelupdb))
+    const peer2 = new Peer("127.0.0.1",3000, 3003, new Repository(Levelupdb))
 
-    const p1Spy = sinon.stub(peer1, "connectionCallback").callsFake(() => {return(true)})
-    const p2Spy = sinon.stub(peer2, "connectionCallback").callsFake(() => {return(true)})
-    //p1Spy.returns(true)
-    //peer1.topology.on = sinon.spy()
+   
 
     peer1.registerAsPeer().then(() => {
 
       peer2.registerAsPeer().then(() => {
-        peer2.setupPeerNetwork(3002)//,['127.0.0.1:3001'])
+        peer2.setupPeerNetwork(3003)
         .then(()=> {
-         // console.log(peer2.topology)
-          peer2.topology.on = sinon.spy()
-            peer1.setupPeerNetwork(3001)//,['127.0.0.1:3002'])
+         
+            peer1.setupPeerNetwork(3002)
            .then(()=> {
-             //peer1.topology.on = sinon.spy()
+             
               setTimeout(() =>{
-                expect(p1Spy.called).to.be.true
-                expect(p1Spy.callCount).to.equal(1)
-                expect(p2Spy.called).to.be.true
-                expect(p2Spy.callCount).to.equal(1)
-
-               // console.log(p2Spy)
+                
+                expect(Object.keys(peer1.connectedPeers).length).to.eql(1)
+                expect(Object.keys(peer2.connectedPeers).length).to.eql(1)
+               
                 peer1.topology.destroy()
                 peer2.topology.destroy()
                 done()
               },100)
-            //p1Spy.called.should.eql(true)
-             //expect(p1Spy.firstCall.returnValue).equal(true)
-             //peer1.topology.destroy()
-             //peer2.topology.destroy()
-                //done()
+            
 
            })
         })
@@ -273,13 +276,195 @@ describe('Peer Connectivity', () => {
     
   })
 
+  it("closes a peer connection",(done) => {
+    const peer1 = new Peer("127.0.0.1",3000, 3002, new Repository(Levelupdb))
+    const peer2 = new Peer("127.0.0.1",3000, 3003, new Repository(Levelupdb))
+
+    peer1.registerAsPeer().then(() => {
+
+      peer2.registerAsPeer().then(() => {
+        peer2.setupPeerNetwork(3003)
+        .then(()=> {
+         
+            peer1.setupPeerNetwork(3002)
+           .then(()=> { 
+              setTimeout(() =>{
+              
+                peer1.endConnection("127.0.0.1:3003")
+                expect(Object.keys(peer1.connectedPeers).length).to.eql(0)
+                setTimeout(() => {
+                  expect(Object.keys(peer2.connectedPeers).length).to.eql(0)
+                  peer1.topology.destroy()
+                  peer2.topology.destroy()
+                  done()
+
+                }, 100)
+                
+              },100)
+           
+
+           })
+        })
+       
+       
+
+      })
+    })
+
+  })
+
+  it("throws an error when trying to close a non-existant connection",(done) => {
+    const peer1 = new Peer("127.0.0.1",3000, 3002, new Repository(Levelupdb))
+    const peer2 = new Peer("127.0.0.1",3000, 3003, new Repository(Levelupdb))
+
+    peer1.registerAsPeer().then(() => {
+
+      peer2.registerAsPeer().then(() => {
+        peer2.setupPeerNetwork(3003)
+        .then(()=> {
+         
+            peer1.setupPeerNetwork(3002)
+           .then(()=> { 
+              setTimeout(() =>{
+                expect(() => peer1.endConnection("127.0.0.1:3005")).to.throw(Error, "no connection to peer: '127.0.0.1:3005'")
+                peer1.topology.destroy()
+                peer2.topology.destroy()
+                done()
+
+                
+              },100)
+           
+
+           })
+        })
+       
+       
+
+      })
+    })
+
+  })
+
+   it("sends a private message to another peer",(done) => {
+    const peer1 = new Peer("127.0.0.1",3000, 3002, new Repository(Levelupdb))
+    const peer2 = new Peer("127.0.0.1",3000, 3003, new Repository(Levelupdb))
+
+    peer1.registerAsPeer().then(() => {
+
+      peer2.registerAsPeer().then(() => {
+        peer2.setupPeerNetwork(3003)
+        .then(()=> {
+         
+            peer1.setupPeerNetwork(3002)
+           .then(()=> { 
+              setTimeout(() =>{
+                expect(peer2.messageQueue.length).to.eql(0)
+                peer1.sendMessage("127.0.0.1:3003",'ping')
+                
+                setTimeout(() => {
+                  expect(peer2.messageQueue.length).to.eql(1)
+                  peer1.topology.destroy()
+                  peer2.topology.destroy()
+                  done()
+
+                }, 100)
+                
+              },100)
+           
+
+           })
+        })
+       
+       
+
+      })
+    })
+
+  })
+
+  it("throws an error when trying to send a private message to a non-existant peer",(done) => {
+    const peer1 = new Peer("127.0.0.1",3000, 3002, new Repository(Levelupdb))
+    const peer2 = new Peer("127.0.0.1",3000, 3003, new Repository(Levelupdb))
+
+    peer1.registerAsPeer().then(() => {
+
+      peer2.registerAsPeer().then(() => {
+        peer2.setupPeerNetwork(3003)
+        .then(()=> {
+         
+            peer1.setupPeerNetwork(3002)
+           .then(()=> { 
+              setTimeout(() =>{
+                expect(peer2.messageQueue.length).to.eql(0)
+               
+                expect(() =>  peer1.sendMessage("127.0.0.1:3005",'ping')).to.throw(Error, "no connection to peer: '127.0.0.1:3005'")
+                peer1.topology.destroy()
+                peer2.topology.destroy()
+                done()
+                
+                
+              },100)
+           
+
+           })
+        })
+       
+       
+
+      })
+    })
+
+  })*/
+
+  it("broadcasts a message to all connected peers", (done) => {
+    const peer1 = new Peer("127.0.0.1",3000, 3001,3002, new Repository(Levelupdb))
+    const peer2 = new Peer("127.0.0.1",3000, 3001,3003, new Repository(Levelupdb))
+    const peer3 = new Peer("127.0.0.1",3000, 3001,3004, new Repository(Levelupdb))
+
+    const peers = [peer1, peer2, peer3]
+
+    const registerPromises = peers.map((peer) => {
+      return peer.registerAsPeer()
+    })
+
+    Promise.all(registerPromises)
+    .then(() => {
+      //console.log("all registered")
+      let peerSetups = []
+      peerSetups.push(peer1.setupPeerNetwork(3002))
+      peerSetups.push(peer2.setupPeerNetwork(3003))
+      peerSetups.push(peer3.setupPeerNetwork(3004))
+
+      Promise.all(peerSetups).then(() => {
+        //console.log("all connected")
+        
+        setTimeout(() => {
+            peer1.broadcastMessage('ping')
+            setTimeout(() => {
+              expect(peer2.messageQueue.length).to.eql(1)
+              expect(peer3.messageQueue.length).to.eql(1)
+              peer1.topology.destroy()
+              peer2.topology.destroy()
+              peer3.topology.destroy()
+              done()
+            }, 100)
+            
+
+        }, 100)
+        
+      })
+    })
+
+
+  })
+
   
 })
 
 describe("Peer transaction processing", () => {
  let peer = null
  beforeEach((done) => {
-     peer = new Peer('http://localhost',3000, 3001, new Repository(Levelupdb))
+     peer = new Peer("127.0.0.1",3000, 3001,3002, new Repository(Levelupdb))
      peer.createCollections().then(() => {
       done()
 
@@ -341,7 +526,7 @@ describe("Peer transaction processing", () => {
 describe("Peer block processing", () => {
   let peer = null
   beforeEach((done) => {
-     peer = new Peer('http://localhost',3000, 3001, new Repository(Levelupdb))
+     peer = new Peer("127.0.0.1",3000, 3001, 3002, new Repository(Levelupdb))
      peer.createCollections().then(() => {
       //add an origin block
       const originBlock = new Block({"previousHash": "-1", "transactions":[],"index":0})
@@ -490,14 +675,14 @@ describe("Peer block processing", () => {
 
 describe("Input Message Processing", () => {
   it("should throw an error when trying to push a non-message on to the message queue", (done) => {
-    const peer1 = new Peer('http://localhost',3000, 3001, new Repository(Levelupdb))
+    const peer1 = new Peer("127.0.0.1",3000, 3001,3002, new Repository(Levelupdb))
     const message ={"action":"ping"}
     expect(() => peer1.pushMessage(message)).to.throw(Error, "pushMessage requires a parameter of type message")
     
     done()
   })
   it("should push a message on to the end of the message queue", (done) => {
-    const peer = new Peer('http://localhost',3000, 3001, new Repository(Levelupdb))
+    const peer = new Peer("127.0.0.1",3000, 3001,3002, new Repository(Levelupdb))
     const message1 = new Message({peer:"A Peer", action:"ping", data: "some data"})
     const message2 = new Message({peer:"A Peer", action:"ping", data: "some other data"})
     expect(peer.pushMessage(message1)).to.be.instanceOf(Message)
@@ -511,7 +696,7 @@ describe("Input Message Processing", () => {
     done()
   })
   it("should get a message from the front of the message queue", (done) => {
-    const peer = new Peer('http://localhost',3000, 3001, new Repository(Levelupdb))
+    const peer = new Peer("127.0.0.1",3000, 3001,3002, new Repository(Levelupdb))
     const message1 = new Message({peer:"A Peer", action:"ping", data: "some data"})
     const message2 = new Message({peer:"A Peer", action:"ping", data: "some other data"})
     expect(peer.pushMessage(message1)).to.be.instanceOf(Message)
@@ -526,7 +711,7 @@ describe("Input Message Processing", () => {
     done()
   })
   it("should return 'undefined' when popping an element from an empty message queue", (done) => {
-    const peer = new Peer('http://localhost',3000, 3001, new Repository(Levelupdb))
+    const peer = new Peer("127.0.0.1",3000, 3001,3002, new Repository(Levelupdb))
     
     const nextMessage = peer.popMessage()
     expect(nextMessage).to.be.undefined
@@ -536,7 +721,7 @@ describe("Input Message Processing", () => {
   })
 
   it("should process a received 'ping' message", (done) => {
-    const peer = new Peer('http://localhost',3000, 3001, new Repository(Levelupdb))
+    const peer = new Peer("127.0.0.1",3000,3001, 3002, new Repository(Levelupdb))
     const pingMessage = new Message({peer:"127.0.0.1:4000", action:"ping"})
 
     const peerSpy = sinon.stub(peer, "sendMessage").callsFake(() => {return(true)})
@@ -553,7 +738,7 @@ describe("Input Message Processing", () => {
   })
 
   it("should return a zero blockchain length if the peer has no blockchain property", (done) => {
-    const peer = new Peer('http://localhost',3000, 3001, new Repository(Levelupdb))
+    const peer = new Peer("127.0.0.1",3000, 3001,3002, new Repository(Levelupdb))
     const sendblockchainLengthMessage = new Message({peer:"127.0.0.1:4000", action:"sendblockchainlength"})
 
     const peerSpy = sinon.stub(peer, "sendMessage").callsFake(() => {return(true)})
@@ -570,7 +755,7 @@ describe("Input Message Processing", () => {
   })
 
   it("should process a received 'sendblockchainlength' message", (done) => {
-    const peer = new Peer('http://localhost',3000, 3001, new Repository(Levelupdb))
+    const peer = new Peer("127.0.0.1",3000, 3001,3002, new Repository(Levelupdb))
     const blockchain = new Blockchain({"length": 10, "latestblockid": "abcdef","latestblockindex": 20})
     peer.setBlockchain(blockchain)
 
@@ -590,7 +775,7 @@ describe("Input Message Processing", () => {
   })
 
   it("should process a received 'sendblocks' message", (done) => {
-    const peer = new Peer('http://localhost',3000, 3001, new Repository(Levelupdb))
+    const peer = new Peer("127.0.0.1",3000, 3001,3002, new Repository(Levelupdb))
     peer.createCollections().then(() => {
       const transactions1 = [
         
@@ -653,7 +838,7 @@ describe("Input Message Processing", () => {
   })
 
    it("should process a received 'addblock' message, throwing an error if the received data is not a block", (done) => {
-    const peer = new Peer('http://localhost',3000, 3001, new Repository(Levelupdb))
+    const peer = new Peer("127.0.0.1",3000, 3001,3002, new Repository(Levelupdb))
     peer.createCollections().then(() => {
 
        //add an origin block
@@ -693,7 +878,7 @@ describe("Input Message Processing", () => {
   })
 
   it("should process a received 'addblock' message, throwing an error if the received block is invalid", (done) => {
-    const peer = new Peer('http://localhost',3000, 3001, new Repository(Levelupdb))
+    const peer = new Peer("127.0.0.1",3000, 3001,3002, new Repository(Levelupdb))
     peer.createCollections().then(() => {
 
        //add an origin block
@@ -749,7 +934,7 @@ describe("Input Message Processing", () => {
   })
   
   it("should process a received 'addblock' message, throwing an error if the received block index is <= latest block index", (done) => {
-    const peer = new Peer('http://localhost',3000, 3001, new Repository(Levelupdb))
+    const peer = new Peer("127.0.0.1",3000, 3001,3002, new Repository(Levelupdb))
     peer.createCollections().then(() => {
 
        //add an origin block
@@ -804,7 +989,7 @@ describe("Input Message Processing", () => {
   })
 
   it("should process a received 'addblock' message, throwing an error if the received block previousHash is not the hash of the latest block", (done) => {
-    const peer = new Peer('http://localhost',3000, 3001, new Repository(Levelupdb))
+    const peer = new Peer("127.0.0.1",3000, 3001,3002, new Repository(Levelupdb))
     peer.createCollections().then(() => {
 
        //add an origin block
@@ -859,7 +1044,7 @@ describe("Input Message Processing", () => {
   })
 
   it("should process a received 'addblock' message, throwing an error if the received block index is greater than that of the next block. Should broadcast a 'sendblocks' message and change peer status", (done) => {
-    const peer = new Peer('http://localhost',3000, 3001, new Repository(Levelupdb))
+    const peer = new Peer("127.0.0.1",3000, 3001,3002, new Repository(Levelupdb))
     peer.createCollections().then(() => {
 
        //add an origin block
@@ -919,7 +1104,7 @@ describe("Input Message Processing", () => {
   })
 
    it("should process a received 'addblock' message", (done) => {
-    const peer = new Peer('http://localhost',3000, 3001, new Repository(Levelupdb))
+    const peer = new Peer("127.0.0.1",3000, 3001,3002, new Repository(Levelupdb))
     peer.createCollections().then(() => {
 
        //add an origin block
@@ -985,7 +1170,7 @@ describe("Input Message Processing", () => {
   })
 
   it("should process an incoming 'addtransaction' message, throwing an error if the data not a transaction", (done) => {
-    const peer = new Peer('http://localhost',3000, 3001, new Repository(Levelupdb))
+    const peer = new Peer("127.0.0.1",3000, 3001,3002, new Repository(Levelupdb))
     peer.createCollections().then(() => {
       
 
@@ -1011,7 +1196,7 @@ describe("Input Message Processing", () => {
   })
 
   it("should process an incoming 'addtransaction' message, throwing an error if the data is an invalid transaction", (done) => {
-    const peer = new Peer('http://localhost',3000, 3001, new Repository(Levelupdb))
+    const peer = new Peer("127.0.0.1",3000, 3001, 3002, new Repository(Levelupdb))
     peer.createCollections().then(() => {
       //create a transaction
       const transaction = new Transaction({'consignmentid':'cabcdefg','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey})
@@ -1045,7 +1230,7 @@ describe("Input Message Processing", () => {
 
 
   it("should process an incoming 'addtransaction' message", (done) => {
-    const peer = new Peer('http://localhost',3000, 3001, new Repository(Levelupdb))
+    const peer = new Peer("127.0.0.1",3000, 3001, 3002, new Repository(Levelupdb))
     peer.createCollections().then(() => {
       //create a transaction
       const transaction = new Transaction({'consignmentid':'cabcdefg','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey})

@@ -16,6 +16,7 @@
     "sinon": "^6.1.5"
   },
   "dependencies": {
+    "duplex-json-stream": "^1.0.1",
     "fully-connected-topology": "^1.1.1",
     "request": "^2.87.0",
     "request-promise-native": "^1.0.5"

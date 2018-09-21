@@ -10,7 +10,9 @@
   "license": "ISC",
   "dependencies": {
     "body-parser": "^1.18.3",
+    "duplex-json-stream": "^1.0.1",
     "express": "^4.16.3",
+    "fully-connected-topology": "^1.1.1",
     "http-status": "^1.2.0"
   },
   "devDependencies": {
