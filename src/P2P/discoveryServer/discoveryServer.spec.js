@@ -3,6 +3,10 @@
 const request = require('supertest')
 const server = require('../discoveryServer')
 const should = require('should')
+const Peer = require('../peer').Peer
+const nconf = require('../../config/conf.js').nconf
+const Repository = require('../../repository/repository').Repository
+const Levelupdb = require('../../database/leveldb/levelup').Levelupdb
 
 
 describe('Discovery Server', () => {
@@ -79,15 +83,18 @@ describe('Discovery Server', () => {
     .set('Accept','aplication/json')
     .expect(201)
     .then(() => {
-      request(app)
-      .get('/activeNodes')
-      .expect(200)
-      .then(response => {
-        
-        response.body["::ffff:127.0.0.1"][0].should.eql(5000)
-        done()
+      setTimeout(() => {
+        request(app)
+        .get('/activeNodes')
+        .expect(200)
+        .then(response => {
+          
+          response.body["127.0.0.1"][0].should.eql('5000')
+          done()
 
-      })
+          })
+      },
+      1000)
 
     })
   })
@@ -172,7 +179,8 @@ describe('Discovery Server', () => {
             .set('Content-Type','application/json')
             .set('Accept','aplication/json')
             .expect((res) => {
-              let r = res.body["::ffff:127.0.0.1"]
+              
+              let r = res.body["127.0.0.1"]
               r.should.not.containEql(6000)
             })
             .expect(200, done)
@@ -200,10 +208,52 @@ describe('Discovery Server', () => {
         .set('Content-Type','application/json')
         .set('Accept','aplication/json')
         .expect((res) => {
-          should.not.exist(res.body["::ffff:127.0.0.1"])
+          should.not.exist(res.body["127.0.0.1"])
         })
         .expect(200, done)
 
+    })
+
+  })
+
+  it("removes a peer from active Nodes when it disconnects",(done) => {
+    const peer1 = new Peer("127.0.0.1",3000, 3001,3002, new Repository(Levelupdb))
+    const peer2 = new Peer("127.0.0.1",3000, 3001,3003, new Repository(Levelupdb))
+
+    peer1.registerAsPeer().then(() => {
+
+      peer2.registerAsPeer().then(() => {
+        peer2.setupPeerNetwork(3003)
+        .then(()=> {
+         
+            peer1.setupPeerNetwork(3002)
+           .then(()=> { 
+              setTimeout(() =>{
+                peer1.topology.destroy()
+                
+                setTimeout(() => {
+                  request(app)
+                    .get('/activeNodes')
+                    .expect(200)
+                    .then(response => {
+                      response.body["127.0.0.1"].should.not.containEql(3002)
+                      peer2.topology.destroy()
+                      done()
+
+                      })
+                  
+
+                }, 100)
+                
+              },100)
+           
+
+           })
+        })
+       
+       
+
+      })
     })
 
   })

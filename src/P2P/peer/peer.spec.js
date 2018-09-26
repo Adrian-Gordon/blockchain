@@ -205,9 +205,9 @@ describe('Peer Connectivity', () => {
       
     
   })
-/*
+
   it("gets a list of peers from the discovery server", (done) => {
-    const peer = new Peer("127.0.0.1",3000, 3002, new Repository(Levelupdb))
+    const peer = new Peer("127.0.0.1",3000, 3001, 3002, new Repository(Levelupdb))
 
     peer.getPeers().then((peers) => {
       peers.should.be.instanceof(Object)
@@ -217,7 +217,7 @@ describe('Peer Connectivity', () => {
   })
 
   it("registers as a peer", (done) => {
-    const peer = new Peer("127.0.0.1",3000, 3002, new Repository(Levelupdb))
+    const peer = new Peer("127.0.0.1",3000, 3001,3002, new Repository(Levelupdb))
     peer.registerAsPeer().then((result) => {
       result.port.should.eql(3002)
       done()
@@ -229,7 +229,7 @@ describe('Peer Connectivity', () => {
   })
 
   it("returns a peer's status", (done) => {
-    const peer = new Peer("127.0.0.1",3000, 3002, new Repository(Levelupdb))
+    const peer = new Peer("127.0.0.1",3000, 3001,3002, new Repository(Levelupdb))
 
     const status = peer.getStatus()
     status.status.should.eql('OK')
@@ -241,8 +241,8 @@ describe('Peer Connectivity', () => {
   })
 
   it("sets up peer network", (done) => {
-    const peer1 = new Peer("127.0.0.1",3000, 3002, new Repository(Levelupdb))
-    const peer2 = new Peer("127.0.0.1",3000, 3003, new Repository(Levelupdb))
+    const peer1 = new Peer("127.0.0.1",3000, 3001,3002, new Repository(Levelupdb))
+    const peer2 = new Peer("127.0.0.1",3000, 3001, 3003, new Repository(Levelupdb))
 
    
 
@@ -257,8 +257,8 @@ describe('Peer Connectivity', () => {
              
               setTimeout(() =>{
                 
-                expect(Object.keys(peer1.connectedPeers).length).to.eql(1)
-                expect(Object.keys(peer2.connectedPeers).length).to.eql(1)
+                expect(Object.keys(peer1.connectedPeers).length).to.eql(2)
+                expect(Object.keys(peer2.connectedPeers).length).to.eql(2)
                
                 peer1.topology.destroy()
                 peer2.topology.destroy()
@@ -277,8 +277,8 @@ describe('Peer Connectivity', () => {
   })
 
   it("closes a peer connection",(done) => {
-    const peer1 = new Peer("127.0.0.1",3000, 3002, new Repository(Levelupdb))
-    const peer2 = new Peer("127.0.0.1",3000, 3003, new Repository(Levelupdb))
+    const peer1 = new Peer("127.0.0.1",3000, 3001,3002, new Repository(Levelupdb))
+    const peer2 = new Peer("127.0.0.1",3000, 3001,3003, new Repository(Levelupdb))
 
     peer1.registerAsPeer().then(() => {
 
@@ -291,9 +291,9 @@ describe('Peer Connectivity', () => {
               setTimeout(() =>{
               
                 peer1.endConnection("127.0.0.1:3003")
-                expect(Object.keys(peer1.connectedPeers).length).to.eql(0)
+                expect(Object.keys(peer1.connectedPeers).length).to.eql(1)
                 setTimeout(() => {
-                  expect(Object.keys(peer2.connectedPeers).length).to.eql(0)
+                  expect(Object.keys(peer2.connectedPeers).length).to.eql(1)
                   peer1.topology.destroy()
                   peer2.topology.destroy()
                   done()
@@ -314,8 +314,8 @@ describe('Peer Connectivity', () => {
   })
 
   it("throws an error when trying to close a non-existant connection",(done) => {
-    const peer1 = new Peer("127.0.0.1",3000, 3002, new Repository(Levelupdb))
-    const peer2 = new Peer("127.0.0.1",3000, 3003, new Repository(Levelupdb))
+    const peer1 = new Peer("127.0.0.1",3000, 3001,3002, new Repository(Levelupdb))
+    const peer2 = new Peer("127.0.0.1",3000, 3001, 3003, new Repository(Levelupdb))
 
     peer1.registerAsPeer().then(() => {
 
@@ -346,8 +346,8 @@ describe('Peer Connectivity', () => {
   })
 
    it("sends a private message to another peer",(done) => {
-    const peer1 = new Peer("127.0.0.1",3000, 3002, new Repository(Levelupdb))
-    const peer2 = new Peer("127.0.0.1",3000, 3003, new Repository(Levelupdb))
+    const peer1 = new Peer("127.0.0.1",3000, 3001, 3002, new Repository(Levelupdb))
+    const peer2 = new Peer("127.0.0.1",3000, 3001, 3003, new Repository(Levelupdb))
 
     peer1.registerAsPeer().then(() => {
 
@@ -383,8 +383,8 @@ describe('Peer Connectivity', () => {
   })
 
   it("throws an error when trying to send a private message to a non-existant peer",(done) => {
-    const peer1 = new Peer("127.0.0.1",3000, 3002, new Repository(Levelupdb))
-    const peer2 = new Peer("127.0.0.1",3000, 3003, new Repository(Levelupdb))
+    const peer1 = new Peer("127.0.0.1",3000, 3001, 3002, new Repository(Levelupdb))
+    const peer2 = new Peer("127.0.0.1",3000,3001,  3003, new Repository(Levelupdb))
 
     peer1.registerAsPeer().then(() => {
 
@@ -414,7 +414,7 @@ describe('Peer Connectivity', () => {
       })
     })
 
-  })*/
+  })
 
   it("broadcasts a message to all connected peers", (done) => {
     const peer1 = new Peer("127.0.0.1",3000, 3001,3002, new Repository(Levelupdb))

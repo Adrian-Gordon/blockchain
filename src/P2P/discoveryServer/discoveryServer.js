@@ -12,6 +12,8 @@ const topology = require('fully-connected-topology')
 
 const jsonStream = require('duplex-json-stream')
 
+
+
 let app = null
 
 
@@ -36,10 +38,16 @@ const startServer = (port1, port2) => {
 
     app.get('/activeNodes', (req, res, next) => {
       let returnedObj = {}
+
       Object.keys(app.activeNodes).forEach(key => {
-        let ips = app.activeNodes[key].map(obj => {
-          return obj.port
+        let ips = []
+        Object.keys(app.activeNodes[key]).forEach(port => {
+          ips.push(port)
         })
+
+        /*let ips = app.activeNodes[key].map(obj => {
+          return obj.port
+        })*/
         returnedObj[key] = ips
       })
       res.status(status.OK).send(returnedObj)
@@ -50,6 +58,10 @@ const startServer = (port1, port2) => {
     app.post('/activeNodes', (req, res, next) => {
       let port = req.body.port
       let ip = req.ip
+
+      if(ip.indexOf(':') !== -1){ //if it's an ip v6 
+        ip = ip.split(':')[3]
+      }
       
       if(typeof port == 'undefined'){
         res.status(status.BAD_REQUEST).send()
@@ -58,16 +70,18 @@ const startServer = (port1, port2) => {
         res.status(status.BAD_REQUEST).send()
       }
       else{
-        swarm.add(ip + ":" + port)
+        const addResult = swarm.add(ip + ":" + port)
         let socket = swarm.peer(ip + ":" + port)
+        
+        
         if(typeof app.activeNodes[ip] == 'undefined'){
-          app.activeNodes[ip] = [{"port":port,"socket": socket}]
+          app.activeNodes[ip]={}
+          app.activeNodes[ip][port] = socket
         }
         else{
-          let ports = app.activeNodes[ip].map(obj => {return(obj.port)})
-          if(!ports.includes(port)){                                  //don't add the same port twice
-            app.activeNodes[ip].push({"port":port,"socket": socket})
-          }
+
+          app.activeNodes[ip][port] = socket
+          
         }
       
         res.status(status.CREATED).send({"ip": ip, "port":port})
@@ -78,6 +92,9 @@ const startServer = (port1, port2) => {
      app.delete('/activeNodes', (req, res, next) => {
       let port = req.body.port
       let ip = req.ip
+      if(ip.indexOf(':') !== -1){ //if it's an ip v6 
+        ip = ip.split(':')[3]
+      }
       if(typeof port == 'undefined'){
         res.status(status.BAD_REQUEST).send()
       }
@@ -91,19 +108,25 @@ const startServer = (port1, port2) => {
           res.status(status.NOT_FOUND).send()
         }
         else{
-          let ports = entry.map(obj => {
-            return obj.port
-          }) 
-          if(ports.indexOf(port) == -1){ //port not found for this ip
+           
+          if(typeof entry[port] == 'undefined'){ //port not found for this ip
             res.status(status.NOT_FOUND).send()
           }
           else{
-            //remove from the array
-            app.activeNodes[ip] = app.activeNodes[ip].filter(e => e.port != port)
-            if(app.activeNodes[ip].length == 0){
-              delete app.activeNodes
-            }
-            res.status(status.OK).send(app.activeNodes)
+          
+              deleteFromActiveNodes(ip, port)
+             let returnedObj = {}
+
+            Object.keys(app.activeNodes).forEach(key => {
+              let ips = []
+              Object.keys(app.activeNodes[key]).forEach(port => {
+                ips.push(port)
+              })
+
+       
+            returnedObj[key] = ips
+             })
+            res.status(status.OK).send(returnedObj)
           }
         }
       }
@@ -121,6 +144,15 @@ const startServer = (port1, port2) => {
  
 }
 
+const deleteFromActiveNodes = (ip, port) => {
+  if(typeof app.activeNodes[ip][port] !== 'undefined')
+    delete app.activeNodes[ip][port]
+  if(Object.keys(app.activeNodes[ip]).length == 0){
+    delete app.activeNodes[ip]
+  }
+
+}
+
 const connectionCallback = (connection, peer) => {
     const socket = jsonStream(connection)
     socket.on('data', (data) => {
@@ -128,12 +160,33 @@ const connectionCallback = (connection, peer) => {
 
     })
     socket.on('end', () => {
-      /*app.activeNodes[ip] = app.activeNodes[ip].filter(e => e != port)
-          if(app.activeNodes[ip].length == 0){
-            delete app.activeNodes
-          }*/
+     
+      const index = peer.indexOf(':')
+      const ip = peer.substring(0,index)
+      const port = peer.substring(index+1,peer.length)
+      
+      deleteFromActiveNodes(ip, port)
+      console.log("discovery server disconnects from " + peer)
+     
     })
+
     console.log("discovery server connected to " + peer)
+
+    const index = peer.indexOf(':')
+    const ip = peer.substring(0,index)
+    const port = parseInt(peer.substring(index+1,peer.length))
+
+    if(typeof app.activeNodes[ip] == 'undefined'){
+          app.activeNodes[ip]={}
+          app.activeNodes[ip][port] = socket
+    }
+    else{
+
+          app.activeNodes[ip][port] = socket
+         
+    }
+
+   
     return(true)
     
   }
