@@ -6,6 +6,8 @@ const chai = require('chai')
 const assert = chai.assert
 const expect = chai.expect
 
+const crypto = require('crypto')
+
 
 const nconf = require('../config/conf.js').nconf
 
@@ -36,6 +38,11 @@ describe("Blockchain", () => {
     done()
   })
 
+  it("throws an error if provided hash is invalid for a serialised blockchain", (done) => {
+    assert.throws(() => new Blockchain({"length": 10, "latestblockindex": 1, "latestblockid":"abcdef", "hash": "qwe342432"}),Error, "blockchain is invalid")
+    done()
+  })
+
   
 
   it("instantiates a Blockchain with length and latestblockid", (done) => {
@@ -56,7 +63,8 @@ describe("Blockchain", () => {
   })
 
   it("deserializes a blockchain", (done) => {
-    const blockchain = new Blockchain({"length":1, "latestblockid":"abcdef","latestblockindex": 10})
+    const hash = crypto.createHash(nconf.get('hashalgorithm')).update("blockchain" + 1 +  10 + "abcdef").digest('hex')
+    const blockchain = new Blockchain({"length":1, "latestblockid":"abcdef","latestblockindex": 10,"hash": hash})
     const str = blockchain.serialize()
     const newbc = Blockchain.deserialize(str)
     newbc.should.be.instanceof(Blockchain)

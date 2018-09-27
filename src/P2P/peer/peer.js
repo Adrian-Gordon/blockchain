@@ -250,17 +250,18 @@ class Peer {
         logger.error(error)
 
       }
-
     })
     socket.on('end', () => {
       //console.log(this.port + "disconnected from" + peer)
       delete this.connectedPeers[peer]
     })
     this.connectedPeers[peer] = socket
-    console.log(this.port + " connected to " + peer)
+    //console.log(this.port + " connected to " + peer)
     return(true)
     
   }
+
+  
 
   endConnection(connectionid){
     const peer = this.connectedPeers[connectionid]
@@ -364,7 +365,8 @@ class Peer {
 
   broadcastMessage(action, data){
     Object.keys(this.connectedPeers).forEach((peer) => {
-      this.sendMessage(peer, action, data, 'broadcast')
+      if(peer !== (this.discoveryServerUrl + ":" + this.discoveryServerMessagePort)) //don't send to discovery Server
+        this.sendMessage(peer, action, data, 'broadcast')
     })
 
   }
@@ -377,6 +379,35 @@ class Peer {
 
     socket.write({'action': action, 'data': data, 'type': type})
 
+  }
+
+  mineBlock(transactions){
+    return new Promise((resolve,reject) => {
+      const newBlock = new Block({"index": this.blockchain.getLatestBlockIndex() + 1, "previousHash":this.blockchain.getLatestBlockId(), "transactions":transactions})
+
+    
+      //broadcast to peers
+      this.broadcastMessage("addblock", newBlock.serialize())
+
+      
+
+      this.addBlock(newBlock)
+      .then(block => {
+        resolve(newBlock)
+      })
+      //and persist block
+  /*    this.addBlock(newBlock)
+      .then(block => {
+          resolve(newBlock)
+      })
+      .catch(error)=> {
+        reject(error)
+      }*/
+
+    })
+
+    
+    
   }
 
 

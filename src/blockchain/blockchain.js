@@ -1,7 +1,11 @@
 'use strict'
 
+const crypto = require('crypto')
+const nconf = require('../config/conf.js').nconf
+
+
 class Blockchain{
-  constructor({length, latestblockid, latestblockindex}){
+  constructor({length, latestblockid, latestblockindex, hash}){
 
     if(typeof length =='undefined' || typeof latestblockid == 'undefined' || typeof latestblockindex == 'undefined' ){
       throw new Error("length, letsetblockid and latestblockindex must be provided")
@@ -18,12 +22,18 @@ class Blockchain{
     if(typeof latestblockid !== 'string'){
       throw new Error("latestblockid must be a string")
     }
-
+    this.id = "blockchain"
     this.length = length
     this.latestblockid = latestblockid
     this.latestblockindex = latestblockindex
+    if(typeof hash !== 'undefined')
+      this.hash = hash
+    else this.hash = Blockchain.createHash(this)
+
+    if(Blockchain.validate(this))return(this)
+    else throw new Error("blockchain is invalid")
     
-    return this
+    
   }
 
   getLength(){
@@ -60,6 +70,8 @@ class Blockchain{
     }
   }
 
+
+
   serialize(){
     return JSON.stringify(this)
   }
@@ -68,6 +80,19 @@ class Blockchain{
     const obj = JSON.parse(str)
   
     return new Blockchain(obj)
+  }
+
+   static createHash(transaction){
+    return crypto.createHash(nconf.get('hashalgorithm')).update(transaction.id + transaction.length + transaction.latestblockindex + transaction.latestblockid).digest('hex')
+
+  }
+
+  static validate(transaction){
+    const hash = crypto.createHash(nconf.get('hashalgorithm')).update(transaction.id + transaction.length  + transaction.latestblockindex + transaction.latestblockid).digest('hex')
+  
+    if(hash === transaction.hash)return true
+    return false
+
   }
 
 

@@ -155,10 +155,7 @@ const deleteFromActiveNodes = (ip, port) => {
 
 const connectionCallback = (connection, peer) => {
     const socket = jsonStream(connection)
-    socket.on('data', (data) => {
-     //deal with the message
-
-    })
+    socket.on('data', onDataCallback)
     socket.on('end', () => {
      
       const index = peer.indexOf(':')
@@ -166,11 +163,11 @@ const connectionCallback = (connection, peer) => {
       const port = peer.substring(index+1,peer.length)
       
       deleteFromActiveNodes(ip, port)
-      console.log("discovery server disconnects from " + peer)
+     // console.log("discovery server disconnects from " + peer)
      
     })
 
-    console.log("discovery server connected to " + peer)
+    //console.log("discovery server connected to " + peer)
 
     const index = peer.indexOf(':')
     const ip = peer.substring(0,index)
@@ -189,6 +186,11 @@ const connectionCallback = (connection, peer) => {
    
     return(true)
     
+  }
+
+  const onDataCallback = (data) => {
+    //console.log("discovery Server message in: " + data)
+
   }
 
   const getSwarm = () => {

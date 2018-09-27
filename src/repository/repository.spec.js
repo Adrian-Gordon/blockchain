@@ -20,6 +20,8 @@ const Transaction = require('../transaction/transaction.js').Transaction
 
 const Block = require('../block/block.js').Block
 
+const Blockchain = require('../blockchain/blockchain.js').Blockchain
+
 
 const Repository = require('./repository').Repository
 
@@ -383,3 +385,93 @@ describe("blocks", () => {
 
  
 })
+
+describe("blockchain", () => {
+
+    const repo = new Repository(Levelupdb)
+
+    before(() => {
+       return new Promise(resolve => {
+          repo.createCollection('blockchain').then(() => {
+            resolve()
+          })
+       })
+      
+    })
+    after(() => {
+        return new Promise(resolve => {
+          Levelupdb.delete('blockchain').then(() => {
+            resolve()
+          })
+       })
+
+    })
+
+    it("adds a valid blockchain to a leveldb database", (done) => {
+      
+      const blockchain = new Blockchain({"length": 1, "latestblockid": "abcdef","latestblockindex": 10})
+
+      repo.addBlockchain(blockchain).then(result => {
+        result.should.eql('OK')
+        Levelupdb.getRecord('blockchain',"blockchain").then(data => {
+          data.id.should.eql("blockchain")
+          done()
+        })
+
+      })
+
+    
+    })
+
+    it("retrieves a blockchain from a leveldb database", (done) => {
+
+      const blockchain = new Blockchain({"length": 1, "latestblockid": "abcdef","latestblockindex": 10})
+
+      repo.addBlockchain(blockchain).then(result => {
+        repo.getBlockchain("blockchain").then(data => {
+          data.should.be.instanceof(Blockchain)
+          data.id.should.eql("blockchain")
+          done()
+        })
+
+      })
+    })
+
+    it("returns a not found error when retrieving a non-existant blockchain from a leveldb database", (done) => {
+      repo.getBlockchain('blockchain1').catch((error)=> {
+        error.notFound.should.eql(true)
+        done()
+      })
+
+    })
+
+    it("deletes a blockchain from a repository", (done) => {
+
+       const blockchain = new Blockchain({"length": 1, "latestblockid": "abcdef","latestblockindex": 10})
+      repo.addBlockchain(blockchain).then(result => {
+        repo.deleteBlockchain("blockchain").then(result => {
+          result.should.eql('OK')
+          Levelupdb.getRecord('blockchain',"blockchain").catch(error => { //should throw an error
+           // logger.info(error)
+            done()
+          })
+        })
+
+      })
+    })
+
+    it("fails to add an invalid blockchain to a leveldb database", (done) => {
+      const blockchain = new Blockchain({"length": 1, "latestblockid": "abcdef","latestblockindex": 10})
+
+      blockchain.latestblockid = "bcdefa"
+
+      repo.addBlockchain(blockchain).then(result => {
+        result.should.eql('INVALID')
+        Levelupdb.getRecord('blockchain',"blockchain").catch(error => {
+          
+          done()
+        })
+
+      })
+    })
+  })

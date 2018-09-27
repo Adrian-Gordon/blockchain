@@ -9,6 +9,8 @@ const Transaction = require('../transaction/transaction').Transaction
 
 const Block = require('../block/block').Block
 
+const Blockchain = require('../blockchain/blockchain').Blockchain
+
 
 class Repository{
   constructor(db){
@@ -116,6 +118,37 @@ class Repository{
 
   deleteBlock(blockid){
     return this.db.deleteRecord('blocks', blockid)
+  }
+
+
+  addBlockchain(blockchain){
+
+    if(Blockchain.validate(blockchain)){ //only add a valid block
+      return this.db.saveRecord('blockchain', blockchain.id,blockchain)
+    }
+    else{
+      return Promise.resolve("INVALID")
+    }
+  
+  }
+
+  getBlockchain(blockchainid){
+    return new Promise((resolve, reject) => {
+      this.db.getRecord('blockchain',blockchainid)
+      .then((record) => {
+        const blockchain = new Blockchain(record)
+        resolve(blockchain)
+      })
+      .catch(error => {
+        reject(error)
+      })
+
+    })
+   
+  }
+
+  deleteBlockchain(blockchainid){
+   return this.db.deleteRecord('blockchain',blockchainid)
   }
 
 

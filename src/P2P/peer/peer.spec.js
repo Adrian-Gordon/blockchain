@@ -1270,3 +1270,87 @@ describe("Input Message Processing", () => {
   })
 })
 
+describe("mining", () => {
+
+  let app = null
+  before((done) => {
+    
+     discoveryServer.startServer(3000, 3001).then(serv => {
+      app = serv
+      done()
+    })
+  })
+
+  after((done) => {
+      discoveryServer.getSwarm().destroy()
+      app.close()
+      app = null
+      done()
+      
+    
+  })
+
+  it("should mine a new Block", (done) => {
+   
+
+    //create some transactions
+    const transaction1 = new Transaction({'consignmentid':'cabcdefg','datatype':'application/json','data':{"some":"arbitrary","json":"data"},"publickey":publicKey})
+    const transaction2 = new Transaction({'consignmentid':'cabcdefg','datatype':'application/json','data':{"someother":"arbitrary","json":"data"},"publickey":publicKey})
+
+    const transactions = [transaction1, transaction2]
+    //sets up a peer network
+
+    const peer1 = new Peer("127.0.0.1",3000, 3001,3002, new Repository(Levelupdb))
+    const peer2 = new Peer("127.0.0.1",3000, 3001, 3003, new Repository(Levelupdb))
+
+    peer1.createCollections()
+    .then(() => {
+       peer1.setBlockchain(new Blockchain({"length": 1, "latestblockid": "-1","latestblockindex":0}))
+
+        peer1.registerAsPeer().then(() => {
+
+          peer2.registerAsPeer().then(() => {
+            peer2.setupPeerNetwork(3003)
+            .then(()=> {
+             
+                peer1.setupPeerNetwork(3002)
+               .then(()=> {
+                 
+                  setTimeout(() =>{
+                    
+                    peer1.mineBlock(transactions)
+                    .then((minedBlock) => {
+                       expect(minedBlock).to.be.instanceof(Block)
+                        expect(peer1.blockchain.getLatestBlockId()).to.eql(minedBlock.id)
+                        expect(peer1.blockchain.getLatestBlockIndex()).to.eql(minedBlock.index)
+                        setTimeout(() =>{
+                         expect(peer2.messageQueue.length).to.eql(1)
+                          peer1.topology.destroy()
+                          peer2.topology.destroy()
+                          done()
+                        },100)
+                    })
+                    
+
+                   
+                   
+                   
+                  },100)
+                
+
+               })
+            })
+           
+           
+
+          })
+        })
+
+    })
+
+   
+
+
+  })
+})
+
