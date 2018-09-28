@@ -92,7 +92,11 @@ class Peer {
       .then(()=> {
         this.repository.createCollection("blocks")
       .then(() => {
+        this.repository.createCollection("blockchain")
+        .then(() => {
           resolve(true)
+        })
+          
       })
       .catch((error)=>{
         reject(error)
@@ -162,6 +166,7 @@ class Peer {
           this.blockchain.setLatestBlockId(block.id)
           this.blockchain.setLatestBlockIndex(block.index)
           this.blockchain.incrementLength()
+          this.blockchain.hash = Blockchain.createHash(this.blockchain)
           resolve(block)
         }
         else{
@@ -393,7 +398,21 @@ class Peer {
 
       this.addBlock(newBlock)
       .then(block => {
-        resolve(newBlock)
+        
+        this.repository.addBlockchain(this.blockchain)
+        .then((added) => {
+         
+          resolve(newBlock)
+        })
+        .catch(error => {
+          console.log(error)
+          reject(error)
+        })
+        
+      })
+      .catch(error => {
+        console.log(error)
+        reject(error)
       })
       //and persist block
   /*    this.addBlock(newBlock)

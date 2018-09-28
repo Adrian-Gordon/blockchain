@@ -82,15 +82,15 @@ class Blockchain{
     return new Blockchain(obj)
   }
 
-   static createHash(transaction){
-    return crypto.createHash(nconf.get('hashalgorithm')).update(transaction.id + transaction.length + transaction.latestblockindex + transaction.latestblockid).digest('hex')
+   static createHash(blockchain){
+    return crypto.createHash(nconf.get('hashalgorithm')).update(blockchain.id + blockchain.length + blockchain.latestblockindex + blockchain.latestblockid).digest('hex')
 
   }
 
-  static validate(transaction){
-    const hash = crypto.createHash(nconf.get('hashalgorithm')).update(transaction.id + transaction.length  + transaction.latestblockindex + transaction.latestblockid).digest('hex')
+  static validate(blockchain){
+    const hash = crypto.createHash(nconf.get('hashalgorithm')).update(blockchain.id + blockchain.length  + blockchain.latestblockindex + blockchain.latestblockid).digest('hex')
   
-    if(hash === transaction.hash)return true
+    if(hash === blockchain.hash)return true
     return false
 
   }

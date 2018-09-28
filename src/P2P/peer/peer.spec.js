@@ -42,8 +42,8 @@ describe('Peer Instantiation', () => {
      Levelupdb.delete('transactionpool')
        .then(()=> {
        Levelupdb.delete('blocks')
-        .then((result) => {
-
+        .then(() => {
+           Levelupdb.delete('blockchain').then(() => {})
         })
 
        })
@@ -141,6 +141,7 @@ describe('Peer Instantiation', () => {
     .then(() => {
        Levelupdb.collections.should.have.property('transactionpool')
        Levelupdb.collections.should.have.property('blocks')
+        Levelupdb.collections.should.have.property('blockchain')
       done()
      
     })
@@ -476,7 +477,13 @@ describe("Peer transaction processing", () => {
   afterEach((done) => {
     peer.repository.deleteCollection('blocks').then(() => {
       peer.repository.deleteCollection("transactionpool").then(()=> {
-        done()
+        peer.repository.deleteCollection("blockchain").then(() => {
+          done()
+        })
+        .catch(error => {
+          console.log("delete " + error)
+        })
+        
       })
     })
 
@@ -546,7 +553,10 @@ describe("Peer block processing", () => {
   afterEach((done) => {
     peer.repository.deleteCollection('blocks').then(() => {
       peer.repository.deleteCollection("transactionpool").then(()=> {
-        done()
+         peer.repository.deleteCollection("blockchain").then(()=> {
+           done()
+         })
+       
       })
     })
 
@@ -823,7 +833,10 @@ describe("Input Message Processing", () => {
             //and cleanup
             peer.repository.deleteCollection('blocks').then(() => {
               peer.repository.deleteCollection("transactionpool").then(()=> {
-                done()
+                peer.repository.deleteCollection("blockchain").then(()=> {
+                  done()
+                })
+                
               })
             })
             
@@ -860,7 +873,9 @@ describe("Input Message Processing", () => {
           expect(error).to.exist
            peer.repository.deleteCollection('blocks').then(() => { //cleanup
               peer.repository.deleteCollection("transactionpool").then(()=> {
-                done()
+                 peer.repository.deleteCollection("blockchain").then(()=> {
+                  done()
+                })
               })
             })
         })
@@ -916,7 +931,9 @@ describe("Input Message Processing", () => {
           expect(error).to.eql("block is invalid")
            peer.repository.deleteCollection('blocks').then(() => { //cleanup
               peer.repository.deleteCollection("transactionpool").then(()=> {
-                done()
+                 peer.repository.deleteCollection("blockchain").then(()=> {
+                  done()
+                })
               })
             })
         })
@@ -971,7 +988,9 @@ describe("Input Message Processing", () => {
           expect(error).to.eql("block index less than or equal to latest")
            peer.repository.deleteCollection('blocks').then(() => { //cleanup
               peer.repository.deleteCollection("transactionpool").then(()=> {
-                done()
+                 peer.repository.deleteCollection("blockchain").then(()=> {
+                  done()
+                })
               })
             })
         })
@@ -1026,7 +1045,9 @@ describe("Input Message Processing", () => {
           expect(error).to.eql("block previousHash not hash of latest block")
            peer.repository.deleteCollection('blocks').then(() => { //cleanup
               peer.repository.deleteCollection("transactionpool").then(()=> {
-                done()
+                 peer.repository.deleteCollection("blockchain").then(()=> {
+                  done()
+                })
               })
             })
         })
@@ -1086,7 +1107,9 @@ describe("Input Message Processing", () => {
           expect(peerSpy.calledWith("sendblocks")).to.be.true
            peer.repository.deleteCollection('blocks').then(() => { //cleanup
               peer.repository.deleteCollection("transactionpool").then(()=> {
-                done()
+                peer.repository.deleteCollection("blockchain").then(()=> {
+                  done()
+                })
               })
             })
         })
@@ -1149,7 +1172,9 @@ describe("Input Message Processing", () => {
             expect(dbBlock.id).to.eql(resultingBlock.id) //it's found
             peer.repository.deleteCollection('blocks').then(() => { //cleanup
               peer.repository.deleteCollection("transactionpool").then(()=> {
-                done()
+                peer.repository.deleteCollection("blockchain").then(()=> {
+                  done()
+                })
               })
             })
           })
@@ -1183,7 +1208,9 @@ describe("Input Message Processing", () => {
 
           peer.repository.deleteCollection('blocks').then(() => { //cleanup
             peer.repository.deleteCollection("transactionpool").then(()=> {
-              done()
+              peer.repository.deleteCollection("blockchain").then(()=> {
+                  done()
+                })
             })
           })
 
@@ -1216,7 +1243,9 @@ describe("Input Message Processing", () => {
 
           peer.repository.deleteCollection('blocks').then(() => { //cleanup
             peer.repository.deleteCollection("transactionpool").then(()=> {
-              done()
+              peer.repository.deleteCollection("blockchain").then(()=> {
+                  done()
+                })
             })
           })
 
@@ -1254,7 +1283,9 @@ describe("Input Message Processing", () => {
             //cleanup
             peer.repository.deleteCollection('blocks').then(() => { //cleanup
               peer.repository.deleteCollection("transactionpool").then(()=> {
-                done()
+                peer.repository.deleteCollection("blockchain").then(()=> {
+                  done()
+                })
               })
             })
             
@@ -1323,13 +1354,23 @@ describe("mining", () => {
                        expect(minedBlock).to.be.instanceof(Block)
                         expect(peer1.blockchain.getLatestBlockId()).to.eql(minedBlock.id)
                         expect(peer1.blockchain.getLatestBlockIndex()).to.eql(minedBlock.index)
-                        setTimeout(() =>{
-                         expect(peer2.messageQueue.length).to.eql(1)
-                          peer1.topology.destroy()
-                          peer2.topology.destroy()
-                          done()
-                        },100)
+                        //has blockcahin been persisted
+                        peer1.repository.getBlockchain("blockchain")
+                        .then(blockchain => {
+                            
+                            expect(blockchain.getLatestBlockId()).to.eql(minedBlock.id)
+                            setTimeout(() =>{
+                            //has the broadcast message been received by peer?
+                             expect(peer2.messageQueue.length).to.eql(1)
+                              peer1.topology.destroy()
+                              peer2.topology.destroy()
+                              done()
+                            },100)
+                          })
+                        
+                        
                     })
+                    
                     
 
                    
