@@ -8,6 +8,7 @@ const Message = require('../../message/message').Message
 const Blockchain = require('../../blockchain/blockchain').Blockchain
 const topology = require('fully-connected-topology')
 const jsonStream = require('duplex-json-stream')
+const { fork } = require('child_process')
 
 const logger = require('../../logger/logger.js')(module)
 
@@ -55,6 +56,7 @@ class Peer {
     this.blockchain = null
     this.state = "running"
     this.connectedPeers = new Object()
+    this.miningCountdownProcess = null
 
   }
 
@@ -106,6 +108,17 @@ class Peer {
       
     })
   
+  }
+
+  deleteCollections(){
+    const promises = [
+    this.repository.deleteCollection("transactionpool"),
+    this.repository.deleteCollection("blocks"),
+    this.repository.deleteCollection("blockchain")
+    ]
+
+    return Promise.all(promises)
+
   }
 
   setBlockchain(blockchain){
@@ -427,6 +440,17 @@ class Peer {
 
     
     
+  }
+
+  startMiningCountdownProcess(timeout){
+
+    this.miningCountdownProcess = fork('./miningCountdownProcess.js',['' + timeout])
+
+    this.miningCountdownProcess.on('exit',this.miningCountdownSuccessCallback)
+  }
+
+  miningCountdownSuccessCallback(code){
+    console.log(`child exited with code ${code}`)
   }
 
 
