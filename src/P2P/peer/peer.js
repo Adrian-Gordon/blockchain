@@ -132,10 +132,21 @@ class Peer {
   }
 
   setBlockchain(blockchain){
-    if(!(blockchain instanceof Blockchain)){
-      throw new Error("setBlockchain must take an argument of type Blockchain")
-    }
-    this.blockchain = blockchain
+    return new Promise((resolve, reject) => {
+      if(!(blockchain instanceof Blockchain)){
+        reject("setBlockchain must take an argument of type Blockchain")
+      }
+
+      this.repository.addBlockchain(blockchain)
+      .then((response) => {
+        this.blockchain = blockchain
+        resolve(this.blockchain)
+      })
+      .catch((error) => {
+        reject(error)
+      })
+    })
+    
   }
 
   getBlockchain(){
