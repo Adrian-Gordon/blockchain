@@ -52,6 +52,10 @@ class Transaction{
     return JSON.stringify(this)
   }
 
+  getSize(){
+    return this.serialize().length
+  }
+
   static deserialize(str){
     const obj = JSON.parse(str)
   

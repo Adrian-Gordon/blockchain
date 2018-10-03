@@ -12,7 +12,7 @@ const { fork } = require('child_process')
 
 const logger = require('../../logger/logger.js')(module)
 
-const validStates = ["running","awaitingblockchain"]
+const validStates = ["running","awaitingblockchain","mining"]
 
 
 
@@ -57,6 +57,7 @@ class Peer {
     this.state = "running"
     this.connectedPeers = new Object()
     this.miningCountdownProcess = null
+    this.transactionPoolSize = 0
 
   }
 
@@ -68,6 +69,15 @@ class Peer {
 
   getState(){
     return(this.state)
+  }
+
+  getTransactionPoolSize(){
+    return(this.transactionPoolSize)
+  }
+
+  setTransactionPoolSize(size){
+    this.transactionPoolSize = size
+    return(size)
   }
 
   getPeers(){
@@ -203,6 +213,7 @@ class Peer {
       this.repository.addTransaction(transaction)
       .then((result) => {
         if(result == 'OK'){
+          this.setTransactionPoolSize(this.getTransactionPoolSize() + transaction.getSize())
           resolve(transaction)
         }
         else{
@@ -212,6 +223,23 @@ class Peer {
 
     })
 
+  }
+
+  getRepositoryTransactionPoolSize(){
+    return new Promise((resolve, reject) => {
+
+      this.repository.getAllTransactions()
+      .then(transactions => {
+        resolve(transactions.map(transaction => {
+          return transaction.getSize()
+        }).reduce((a,b) => a + b, 0))
+      })
+      .catch(error => {
+        reject(error)
+      })
+    })
+
+    
   }
 
   setupPeerNetwork(port){
@@ -345,6 +373,10 @@ class Peer {
         //it should be a block
         try{
           const block = Block.deserialize(message.data)
+          if(this.miningCountdownProcess){
+            //pre-empt it
+            this.miningCountdownProcess.send("pre-empt")
+          }
           this.addBlock(block)
           .then((result) => {
             resolve(result)
@@ -444,13 +476,22 @@ class Peer {
 
   startMiningCountdownProcess(timeout){
 
+    this.setState("mining")
+
     this.miningCountdownProcess = fork('./miningCountdownProcess.js',['' + timeout])
 
-    this.miningCountdownProcess.on('exit',this.miningCountdownSuccessCallback)
+    this.miningCountdownProcess.on('exit',this.miningCountdownSuccessCallback.bind(this))
   }
 
   miningCountdownSuccessCallback(code){
-    console.log(`child exited with code ${code}`)
+    //console.log(`child exited with code ${code}`)
+    if(code == 100){
+      this.miningCountdownProcess = null
+    }
+    if(code == 200){
+      this.setState("running")
+      this.miningCountdownProcess = null
+    }
   }
 
 

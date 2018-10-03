@@ -6,7 +6,7 @@ const timeoutPeriod = 10 + Math.floor(Math.random() * maxTimeoutPeriod)
 
 
 process.on('message',(message) => {
-  console.log("message: " + message)
+  //console.log("message: " + message)
   process.exit(200) //pre-empted
 })
 

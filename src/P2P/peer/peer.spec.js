@@ -114,6 +114,7 @@ describe('Peer Instantiation', () => {
     expect(peer.messageQueue.length).to.eql(0)
     expect(peer.state).to.eql("running")
     expect(peer.miningCountdownProcess).to.eql(null)
+    expect(peer.transactionPoolSize).to.eql(0)
     done()
   })
 
@@ -205,6 +206,25 @@ describe('Peer Instantiation', () => {
     })
 
     
+
+  })
+
+  it("sets the transaction pool size of a peer", (done) => {
+    const peer = new Peer("127.0.0.1",3000, 3001, 3002, new Repository(Levelupdb))
+    expect(peer.setTransactionPoolSize(100)).to.eql(100)
+
+    expect(peer.transactionPoolSize).to.eql(100)
+    done()
+
+  })
+
+  it("gets the transaction pool size of a peer", (done) => {
+    const peer = new Peer("127.0.0.1",3000, 3001, 3002, new Repository(Levelupdb))
+    peer.setTransactionPoolSize(100)
+    expect(peer.getTransactionPoolSize()).to.eql(100)
+
+    
+    done()
 
   })
 
@@ -527,11 +547,13 @@ describe("Peer transaction processing", () => {
 
     const transaction = new Transaction({'consignmentid':'cabcdefi','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey})
 
-     
+    const originalTransactionPoolSize = peer.getTransactionPoolSize()
+    const transactionSize = transaction.getSize()
       peer.addTransaction(transaction)
       .then((result) => {
         expect(result).to.be.instanceof(Transaction)
         expect(result.id).to.eql(transaction.id)
+        expect(peer.getTransactionPoolSize()).to.eql(originalTransactionPoolSize + transactionSize)
         peer.repository.getTransaction(transaction.id)
         .then((trans) => {
           expect(trans.id).to.eql(transaction.id)
@@ -541,6 +563,28 @@ describe("Peer transaction processing", () => {
        
 
       })
+      
+  })
+
+  it("should return the total size of the repository transaction pool", (done) => {
+
+    const transaction1 = new Transaction({'consignmentid':'cabcdefi','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey})
+    const transaction2 = new Transaction({'consignmentid':'cabcdefi','data':{"somemore":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey})
+    const transaction3 = new Transaction({'consignmentid':'cabcdefi','data':{"evenmore":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey})
+  
+    const promises = [peer.addTransaction(transaction1),peer.addTransaction(transaction2),peer.addTransaction(transaction3)]
+     
+     Promise.all(promises)
+     .then(() => {
+      peer.getRepositoryTransactionPoolSize()
+      .then(result => {
+        (typeof result).should.eql('number')
+        done()
+      })
+      
+
+     })
+      
       
   })
 
@@ -1130,7 +1174,7 @@ describe("Input Message Processing", () => {
 
         const addBlockMessage = new Message({peer:"127.0.0.1:4000", action:"addblock", data: blockStr})
 
-        const peerSpy = sinon.stub(peer, "broadcastMessage").callsFake(() => { return(true)})
+        
         //process the received message
         peer.processReceivedMessage(addBlockMessage)
         .then((resultingBlock) => {
@@ -1348,6 +1392,7 @@ describe("mining", () => {
   it("should start a new mining countdown process", (done) => {
      const peer = new Peer("127.0.0.1",3000, 3001,3002, new Repository(Levelupdb))
      const peerSpy = sinon.stub(peer, "miningCountdownSuccessCallback").callsFake(() => {
+      peer.miningCountdownProcess = null
       return(true)
     })
      peer.startMiningCountdownProcess(500)
@@ -1355,6 +1400,8 @@ describe("mining", () => {
      setTimeout(()=> {
       expect(peerSpy.called).to.be.true
       expect(peerSpy.callCount).to.equal(1)
+      expect(peerSpy.calledWith(100)).to.be.true
+      expect(peer.miningCountdownProcess).to.eql(null)
       done()
      }, 1000)
      //console.log(peer1.miningCountdownProcess)
@@ -1364,21 +1411,78 @@ describe("mining", () => {
 
   it("should pre-empt a running mining countdown process", (done) => {
      const peer = new Peer("127.0.0.1",3000, 3001,3002, new Repository(Levelupdb))
-    /* const peerSpy = sinon.stub(peer, "miningCountdownSuccessCallback").callsFake(() => {
-      return(true)
-    })*/
+     
      peer.startMiningCountdownProcess(500)
      expect(peer.miningCountdownProcess).to.not.eql(null)
      setTimeout(() => {
       peer.miningCountdownProcess.send("pre-empt")
       },5)
      setTimeout(()=> {
-      //expect(peerSpy.called).to.be.true
-      //expect(peerSpy.callCount).to.equal(1)
+    
+      expect(peer.getState()).to.eql("running")
+      expect(peer.miningCountdownProcess).to.eql(null)
       done()
      }, 1000)
-     //console.log(peer1.miningCountdownProcess)
      
+     
+
+  })
+
+   it("should pre-empt a mining countdown on receiving an 'addblock' message", (done) => {
+    const peer = new Peer("127.0.0.1",3000, 3001,3002, new Repository(Levelupdb))
+    peer.createCollections().then(() => {
+
+       //add an origin block
+      const originBlock = new Block({"previousHash": "-1", "transactions":[],"index":0})
+      //save to the database
+      peer.repository.addBlock(originBlock).then(result => {
+        //set up the blockchain object
+        const blockchain = new Blockchain({"latestblockid": originBlock.id, "latestblockindex": originBlock.index, "length":1})
+        peer.setBlockchain(blockchain)
+        
+        //build a Block
+        const transactions1 = [
+        
+        ]
+        transactions1.push(new Transaction({'consignmentid':'cabcdefg','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+        transactions1.push(new Transaction({'consignmentid':'cabcdefh','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+        transactions1.push(new Transaction({'consignmentid':'cabcdefi','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+        
+        const block1 = new Block({"previousHash":originBlock.id,"transactions":transactions1, "index":1})
+
+       
+
+        //serialise it
+
+        const blockStr = block1.serialize()
+
+        //build a message
+
+        const addBlockMessage = new Message({peer:"127.0.0.1:4000", action:"addblock", data: blockStr})
+
+         peer.startMiningCountdownProcess(1500)
+         
+        //process the received message
+        peer.processReceivedMessage(addBlockMessage)
+        .then((resultingBlock) => {
+          setTimeout(() => {
+            expect(peer.miningCountdownProcess).to.eql(null)
+            expect(peer.getState()).to.eql("running")
+            done()
+          },500)
+         
+        })
+      
+
+        
+
+      })
+
+
+
+      
+    })
+
 
   })
 })

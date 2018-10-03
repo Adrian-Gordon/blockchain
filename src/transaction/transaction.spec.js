@@ -58,6 +58,16 @@ describe('Transaction', () => {
 
   })
 
+   it("returns the size of a transaction", (done) => {
+    const transaction = new Transaction({'consignmentid':'cabcdefg','datatype':'application/json','data':{"some":"arbitrary","json":"data"},"publickey":publicKey,'timestamp':'123456789'})
+
+    
+    transaction.getSize().should.be.instanceof(Number)
+     
+    done()
+
+  })
+
   it("throws an error if an invalid timestamp is provided", (done) => {
     assert.throws(() => new Transaction({'consignmentid':'cabcdefg','datatype':'application/json','data':{"some":"arbitrary","json":"data"},"publickey":publicKey,'timestamp':"A timestamp"}),Error, "timestamp must be an integer")
     done()
