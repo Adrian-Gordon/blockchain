@@ -370,12 +370,18 @@ class Peer {
                       let latestBlockid = null
 
                       const promises = dataArr.map(blockStr => {
-                        const block = Block.deserialize(blockStr)
-                        if(block.index > latestBlockIndex){
-                          latestBlockIndex = block.index
-                          latestBlockid = block.id
+                        try{
+                          const block = Block.deserialize(blockStr)
+                          if(block.index > latestBlockIndex){
+                            latestBlockIndex = block.index
+                            latestBlockid = block.id
+                          }
+                          return(this.repository.addBlock(block)) //add directly to the repository - they could be in any order
+
+                        }catch(error){
+                          return Promise.reject(error)
                         }
-                        return(this.repository.addBlock(block)) //add directly to the repository - they could be in any order
+                        
                       })
 
                       this.blockchain.setLatestBlockId(latestBlockid)
@@ -390,6 +396,10 @@ class Peer {
                         .then(() => {
                           resolve(true)
                         })
+                      })
+                      .catch(error => {
+            
+                        resolve(false)
                       })
                       
                    })  
