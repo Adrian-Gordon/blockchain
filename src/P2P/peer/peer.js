@@ -182,31 +182,40 @@ class Peer {
 
   addBlock(block){
     return new Promise((resolve, reject) => {
+      
       if(!(block instanceof Block)){
         reject("block must be of class Block")
       }
       if(!Block.validate(block)){
         reject("block is invalid")
       }
-      if(block.index <= this.blockchain.getLatestBlockIndex())
+      else if(block.index <= this.blockchain.getLatestBlockIndex())
         reject("block index less than or equal to latest")
-      if((block.index - this.blockchain.getLatestBlockIndex())> 1)
+      else if((block.index - this.blockchain.getLatestBlockIndex())> 1)
         reject("block index greater than next index")
-      if(block.previousHash !== this.blockchain.getLatestBlockId())
+      else if(block.previousHash !== this.blockchain.getLatestBlockId())
         reject("block previousHash not hash of latest block")
 
-      this.repository.addBlock(block).then(result => {
-        if(result == 'OK'){
-          this.blockchain.setLatestBlockId(block.id)
-          this.blockchain.setLatestBlockIndex(block.index)
-          this.blockchain.incrementLength()
-          this.blockchain.hash = Blockchain.createHash(this.blockchain)
-          resolve(block)
-        }
-        else{
-          reject(result)
-        }
-      })
+      else{
+        this.repository.addBlock(block).then(result => {
+          if(result == 'OK'){
+            
+            this.blockchain.setLatestBlockId(block.id)
+            this.blockchain.setLatestBlockIndex(block.index)
+            this.blockchain.incrementLength()
+            this.blockchain.hash = Blockchain.createHash(this.blockchain)
+            this.repository.addBlockchain(this.blockchain)
+            .then(()=> {
+              resolve(block)
+            })
+            
+          }
+          else{
+            reject(result)
+          }
+        })
+      }
+      
     })
 
     
@@ -342,85 +351,139 @@ class Peer {
   }
 
   processReceivedMessage(message){
+
     return new Promise((resolve, reject) => {
-
-      
-      if(message.action == 'ping'){
-        const status = this.getStatus()
-        const peer = message.peer
-        this.sendMessage(peer, message.action, JSON.stringify(status))
-        resolve(true)
-      }
-      else if(message.action == 'sendblockchainlength'){
-        let length = 0
-        if(this.blockchain !== null){
-          length = this.blockchain.getLength()
+    
+      if(this.getState() == "awaitingblockchain"){
+        if(message.action !== 'blocks'){
+          resolve(false)
         }
-         
-        const peer = message.peer
-        this.sendMessage(peer, "blockchainlength", JSON.stringify(length))
-        resolve(true)
-      }
-      else if(message.action == "sendblocks"){     //serialise the blockchain out of the repository, and send it on to the requestor
-        
-        const blockchain = this.repository.getAllBlocks()
-        .then(blocksArray => {
-          
-          const blocksStringArray = blocksArray.map(block => { return block.serialize()})
-          
-          const peer = message.peer
-          this.sendMessage(peer,"blocks",JSON.stringify(blocksStringArray))
-          resolve(true)
-        })
-        .catch(error => {
-          reject(error)
-        })
-        
+        else{
 
-      }
-      else if(message.action == "addblock"){
-        
+          this.repository.deleteCollection("blocks")
+          .then(() => {
+            this.repository.createCollection("blocks")
+                   .then(() => {
+                      const dataArr = JSON.parse(message.data)
+                     
+                      let latestBlockIndex = -1
+                      let latestBlockid = null
 
-        //it should be a block
-        try{
-          const block = Block.deserialize(message.data)
-          if(this.miningCountdownProcess){
-            //pre-empt it
-            this.miningCountdownProcess.send("pre-empt")
-          }
-          this.addBlock(block)
-          .then((result) => {
-            resolve(result)
+                      const promises = dataArr.map(blockStr => {
+                        const block = Block.deserialize(blockStr)
+                        if(block.index > latestBlockIndex){
+                          latestBlockIndex = block.index
+                          latestBlockid = block.id
+                        }
+                        return(this.repository.addBlock(block)) //add directly to the repository - they could be in any order
+                      })
+
+                      this.blockchain.setLatestBlockId(latestBlockid)
+                      this.blockchain.setLatestBlockIndex(latestBlockIndex)
+                      this.blockchain.setLength(promises.length)
+                      this.blockchain.setHash(Blockchain.createHash(this.blockchain))
+
+                     
+                      Promise.all(promises)
+                      .then(() => {
+                        this.repository.addBlockchain(this.blockchain)
+                        .then(() => {
+                          resolve(true)
+                        })
+                      })
+                      
+                   })  
           })
-          .catch((error) => {
-            if(error == "block index greater than next index"){
-              this.setState("awaitingblockchain")
-              this.broadcastMessage("sendblocks")
-              reject(error)
+        }
+ 
+        
+
+      }
+      else {
+              if(message.action == 'ping'){
+              const status = this.getStatus()
+              const peer = message.peer
+              this.sendMessage(peer, message.action, JSON.stringify(status))
+              resolve(true)
             }
-            reject(error)
-          })
-        }catch(error){
-          reject(error.message)
-        }
+            else if(message.action == 'sendblockchainlength'){
+              let length = 0
+              if(this.blockchain !== null){
+                length = this.blockchain.getLength()
+              }
+               
+              const peer = message.peer
+              this.sendMessage(peer, "blockchainlength", JSON.stringify(length))
+              resolve(true)
+            }
+            else if(message.action == "sendblocks"){     //serialise the blockchain out of the repository, and send it on to the requestor
+              
+              const blockchain = this.repository.getAllBlocks()
+              .then(blocksArray => {
+                
+                const blocksStringArray = blocksArray.map(block => { return block.serialize()})
+                
+                const peer = message.peer
+                this.sendMessage(peer,"blocks",JSON.stringify(blocksStringArray))
+                resolve(true)
+              })
+              .catch(error => {
+                reject(error)
+              })
+              
+
+            }
+            else if(message.action == "addblock"){
+              
+
+              //it should be a block
+              try{
+                const block = Block.deserialize(message.data)
+                if(this.miningCountdownProcess){
+                  //pre-empt it
+                  this.miningCountdownProcess.send("pre-empt")
+                }
+                this.addBlock(block)
+                .then((result) => {
+                  resolve(result)
+                })
+                .catch((error) => {
+                  if(error == "block index greater than next index"){
+                    this.setState("awaitingblockchain")
+                    this.broadcastMessage("sendblocks")
+                    reject(error)
+                  }
+                  reject(error)
+                })
+              }catch(error){
+                reject(error.message)
+              }
+
+            }
+            else if(message.action == "addtransaction"){
+              try{
+                const transaction = Transaction.deserialize(message.data)
+                this.addTransaction(transaction)
+                .then((result) => {
+                  resolve(result)
+                })
+                .catch((error) => {
+                  reject(error)
+                })
+
+              }catch(error){
+                reject(error.message)
+              }
+
+            }
+            else{
+              resolve(false)
+            }
+
 
       }
-      else if(message.action == "addtransaction"){
-        try{
-          const transaction = Transaction.deserialize(message.data)
-          this.addTransaction(transaction)
-          .then((result) => {
-            resolve(result)
-          })
-          .catch((error) => {
-            reject(error)
-          })
-
-        }catch(error){
-          reject(error.message)
-        }
-
-      }
+      
+  
     })
   }
 

@@ -36,6 +36,10 @@ class Blockchain{
     
   }
 
+  setLength(length){
+    this.length = length
+  }
+
   getLength(){
     return this.length
   }
@@ -70,6 +74,13 @@ class Blockchain{
     }
   }
 
+  setHash(hash){
+    this.hash = hash
+  }
+
+  getHash(){
+    return this.hash
+  }
 
 
   serialize(){
@@ -81,6 +92,8 @@ class Blockchain{
   
     return new Blockchain(obj)
   }
+
+
 
    static createHash(blockchain){
     return crypto.createHash(nconf.get('hashalgorithm')).update(blockchain.id + blockchain.length + blockchain.latestblockindex + blockchain.latestblockid).digest('hex')
