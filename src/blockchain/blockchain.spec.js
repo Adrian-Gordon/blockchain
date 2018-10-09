@@ -12,6 +12,17 @@ const crypto = require('crypto')
 const nconf = require('../config/conf.js').nconf
 
 const Blockchain = require('./blockchain').Blockchain
+const Block = require('../block/block.js').Block
+const Transaction = require('../transaction/transaction.js').Transaction
+
+const Levelupdb = require('../database/leveldb/levelup').Levelupdb
+const Repository = require('../repository/repository.js').Repository
+
+const fs = require('fs')
+
+const privateKey = fs.readFileSync(nconf.get('privatekeyurl'),'utf8')
+
+const publicKey = fs.readFileSync(nconf.get('publickeyurl'),'utf8')
 
 describe("Blockchain", () => {
   
@@ -117,6 +128,146 @@ describe("Blockchain", () => {
     blockchain.setLatestBlockIndex(20)
     blockchain.getLatestBlockIndex().should.eql(20)
     done()
+  })
+
+  it("validates a set of saved blocks with respect to a blockchain", (done) => {
+    //create a repository
+     const repo = new Repository(Levelupdb)
+
+     repo.createCollection('blocks').then(result => {
+
+         //add some blocks to the repo
+        const originBlock = new Block({"previousHash": "-1", "transactions":[],"index":0})
+
+        const transactions1 = [
+  
+        ]
+        transactions1.push(new Transaction({'consignmentid':'cabcdefg','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+        transactions1.push(new Transaction({'consignmentid':'cabcdefh','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+        transactions1.push(new Transaction({'consignmentid':'cabcdefi','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+        
+        const block1 = new Block({"previousHash":originBlock.id,"transactions":transactions1, "index":1})
+
+        const transactions2 = [
+          
+        ]
+        transactions2.push(new Transaction({'consignmentid':'cabcdefg','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+        transactions2.push(new Transaction({'consignmentid':'cabcdefh','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+        transactions2.push(new Transaction({'consignmentid':'cabcdefi','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+        
+        const block2 = new Block({"previousHash":block1.id,"transactions":transactions2, "index":2})
+
+        const transactions3 = [
+          
+        ]
+        transactions3.push(new Transaction({'consignmentid':'cabcdefg','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+        transactions3.push(new Transaction({'consignmentid':'cabcdefh','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+        transactions3.push(new Transaction({'consignmentid':'cabcdefi','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+        
+        const block3 = new Block({"previousHash":block2.id,"transactions":transactions3,"index": 3})
+
+
+         repo.addBlock(originBlock)
+         .then(() => {
+          return repo.addBlock(block1)
+         })
+         .then(() => {
+          return repo.addBlock(block2)
+         })
+         .then(() => {
+          return repo.addBlock(block3)
+         })
+         .then(() => {
+            //build the blockchain record
+            const blockchain = new Blockchain({"length":4, "latestblockid":block3.id,"latestblockindex": 3})
+            
+            Blockchain.validateBlocks(blockchain, repo)
+            .then((res) => {
+
+              expect(res).to.eql(true)
+              Levelupdb.delete('blocks').then(result => {
+                done()
+              })
+            })
+
+            
+          })
+        
+            
+        
+      })
+
+  })
+
+   it("failsto validate a set of saved blocks with respect to a blockchain, if any of the saved blocks is invalid", (done) => {
+    //create a repository
+     const repo = new Repository(Levelupdb)
+
+     repo.createCollection('blocks').then(result => {
+
+         //add some blocks to the repo
+        const originBlock = new Block({"previousHash": "-1", "transactions":[],"index":0})
+
+        const transactions1 = [
+  
+        ]
+        transactions1.push(new Transaction({'consignmentid':'cabcdefg','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+        transactions1.push(new Transaction({'consignmentid':'cabcdefh','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+        transactions1.push(new Transaction({'consignmentid':'cabcdefi','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+        
+        const block1 = new Block({"previousHash":originBlock.id,"transactions":transactions1, "index":1})
+
+        const transactions2 = [
+          
+        ]
+        transactions2.push(new Transaction({'consignmentid':'cabcdefg','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+        transactions2.push(new Transaction({'consignmentid':'cabcdefh','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+        transactions2.push(new Transaction({'consignmentid':'cabcdefi','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+        
+        const block2 = new Block({"previousHash":"fakeblockid","transactions":transactions2, "index":2})
+
+        
+
+        const transactions3 = [
+          
+        ]
+        transactions3.push(new Transaction({'consignmentid':'cabcdefg','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+        transactions3.push(new Transaction({'consignmentid':'cabcdefh','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+        transactions3.push(new Transaction({'consignmentid':'cabcdefi','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+        
+        const block3 = new Block({"previousHash":block2.id,"transactions":transactions3,"index": 3})
+
+
+         repo.addBlock(originBlock)
+         .then(() => {
+          return repo.addBlock(block1)
+         })
+         .then(() => {
+          return repo.addBlock(block2)
+         })
+         .then(() => {
+          return repo.addBlock(block3)
+         })
+         .then(() => {
+            //build the blockchain record
+            const blockchain = new Blockchain({"length":4, "latestblockid":block3.id,"latestblockindex": 3})
+            
+            Blockchain.validateBlocks(blockchain, repo)
+            .then((res) => {
+
+              expect(res).to.eql(false)
+              Levelupdb.delete('blocks').then(result => {
+                done()
+              })
+            })
+
+            
+          })
+        
+            
+        
+      })
+
   })
   
 })

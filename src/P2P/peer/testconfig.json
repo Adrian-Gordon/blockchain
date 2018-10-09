@@ -3,5 +3,7 @@
   "signatureformat":"hex",
   "privatekeyurl":"./privatekey.pem",
   "publickeyurl":"./publickey.pem",
-  "dbpath":"../../database/leveldb/data/"
+  "dbpath":"../../database/leveldb/data/",
+  "defaulttpthreshold": 10000,
+  "defaultminingcountdown":100
 }

@@ -11,9 +11,9 @@ const jsonStream = require('duplex-json-stream')
 const { fork } = require('child_process')
 
 const logger = require('../../logger/logger.js')(module)
+const nconf = require('../../config/conf.js').nconf
 
 const validStates = ["running","awaitingblockchain","mining"]
-
 
 
 class Peer {
@@ -58,6 +58,8 @@ class Peer {
     this.connectedPeers = new Object()
     this.miningCountdownProcess = null
     this.transactionPoolSize = 0
+    this.transactionPoolThreshold = nconf.get("defaulttpthreshold")
+    this.miningCountdown = nconf.get("defaultminingcountdown")
 
   }
 
@@ -79,6 +81,16 @@ class Peer {
     this.transactionPoolSize = size
     return(size)
   }
+
+  setTransactionPoolThreshold(threshold){
+    this.transactionPoolThreshold = threshold
+    return(threshold)
+  }
+
+  getTransactionPoolThreshold(threshold){
+    return(this.transactionPoolThreshold)
+  }
+
 
   getPeers(){
     const peersUrl = "http://" + this.discoveryServerUrl + ":" + this.discoveryServerPort + "/activeNodes"
@@ -143,6 +155,7 @@ class Peer {
         resolve(this.blockchain)
       })
       .catch((error) => {
+        console.log("setblockchain err: " + error)
         reject(error)
       })
     })
@@ -151,6 +164,26 @@ class Peer {
 
   getBlockchain(){
     return this.blockchain
+  }
+
+  readBlockchain(){
+    return new Promise((resolve, reject) => {
+      this.repository.getBlockchain("blockchain")
+      .then((bc) => {
+        this.setBlockchain(bc)
+        .then((bc) => {
+          resolve(bc)
+        })
+        .catch(error => {
+          reject(error)
+        })
+      })
+      .catch(error => {
+        reject(error)
+      })
+
+    })
+
   }
 
   registerAsPeer(){
@@ -206,7 +239,13 @@ class Peer {
             this.blockchain.hash = Blockchain.createHash(this.blockchain)
             this.repository.addBlockchain(this.blockchain)
             .then(()=> {
-              resolve(block)
+              const transToDelete = JSON.parse(block.transactions) //deserialise the transactions
+              
+              this.removeTransactions(transToDelete.map(t => {return JSON.parse(t).id}))
+              .then(() => {
+                 resolve(block)
+              })
+             
             })
             
           }
@@ -234,6 +273,10 @@ class Peer {
       .then((result) => {
         if(result == 'OK'){
           this.setTransactionPoolSize(this.getTransactionPoolSize() + transaction.getSize())
+          //kick off mining process, if transaction tkes us over threhold size
+          if(this.getTransactionPoolSize() > this.getTransactionPoolThreshold()){
+            this.startMiningCountdownProcess(this.miningCountdown)
+          }
           resolve(transaction)
         }
         else{
@@ -242,6 +285,15 @@ class Peer {
       })
 
     })
+
+  }
+
+  removeTransactions(transactionids){
+    const promises = transactionids.map((transid) => {
+      return this.repository.deleteTransaction(transid)
+    })
+
+    return Promise.all(promises)
 
   }
 
@@ -543,18 +595,33 @@ class Peer {
         console.log(error)
         reject(error)
       })
-      //and persist block
-  /*    this.addBlock(newBlock)
-      .then(block => {
-          resolve(newBlock)
-      })
-      .catch(error)=> {
-        reject(error)
-      }*/
-
+     
     })
 
     
+    
+  }
+
+  gatherTransactions(threshold){
+    return new Promise((resolve,reject) => {
+      this.repository.getAllTransactions()
+      .then(allTransactions => {
+        let size = 0
+        let includedTransactions =[]
+        for(let i = 0;i<allTransactions.length;i++){
+          let trans = allTransactions[i]
+          size += trans.getSize()
+          if(size >= threshold){
+            break
+          }
+          else{
+            includedTransactions.push(trans)
+          }
+        }
+        resolve(includedTransactions)
+      })
+
+    })
     
   }
 
@@ -568,14 +635,29 @@ class Peer {
   }
 
   miningCountdownSuccessCallback(code){
-    //console.log(`child exited with code ${code}`)
-    if(code == 100){
-      this.miningCountdownProcess = null
-    }
-    if(code == 200){
-      this.setState("running")
-      this.miningCountdownProcess = null
-    }
+    return new Promise((resolve,reject) => {
+      //console.log(`child exited with code ${code}`)
+      if(code == 100){ //success
+        this.miningCountdownProcess = null
+        this.gatherTransactions(this.transactionPoolThreshold)
+        .then((transactions) => {
+          this.mineBlock(transactions)
+          .then((newBlock) => {
+            this.setState("running")
+            resolve(newBlock)
+          })
+          
+        })
+        
+      }
+      if(code == 200){ //failure - has been pre-empted
+        this.setState("running")
+        this.miningCountdownProcess = null
+        resolve(true)
+      }
+
+    })
+    
   }
 
 

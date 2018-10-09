@@ -85,6 +85,13 @@ class Block{
 
 
   }
+
+  isOriginBlock(){
+    if((this.index == 0)&&(this.previousHash == "-1")&&(this.transactions == "[]")){
+      return(true)
+    }
+    return(false)
+  }
  
 
   serialize(){
@@ -105,6 +112,7 @@ class Block{
   }
 
   static validate(block){
+   
     const hash = crypto.createHash(nconf.get('hashalgorithm')).update("" + block.index + block.previousHash + block.timestamp + block.transactions).digest('hex')
   
     if(hash === block.id)return true

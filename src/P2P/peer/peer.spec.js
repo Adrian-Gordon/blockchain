@@ -175,9 +175,11 @@ describe('Peer Instantiation', () => {
 
   })
 
+
+
   it("fails if setBlockchain is called with an argument that is not of class Blockchain", (done) => {
     const peer = new Peer("127.0.0.1",3000, 3001,3002, new Repository(Levelupdb))
- //   expect(() => peer.setBlockchain("a string")).to.throw("setBlockchain must take an argument of type Blockchain")
+
     peer.createCollections()
     .then(() => {
       peer.setBlockchain("a string")
@@ -214,12 +216,74 @@ describe('Peer Instantiation', () => {
           })
 
       })
+      .catch(error => {
+        console.log(error)
+      })
 
      
 
     })
     
   })
+
+   it("reads a peer's blockchain from the repository, if it exists", (done) => {
+    const peer = new Peer("127.0.0.1",3000, 3001, 3002, new Repository(Levelupdb))
+    peer.repository.createCollection("blockchain")
+    .then((r) => {
+     
+      const blockchain = new Blockchain({"length": 20, "latestblockid": "xxxxx","latestblockindex":30})
+      peer.setBlockchain(blockchain)
+      .then((bc) => {
+        
+        peer.repository.db.close('blockchain')
+        .then((cbc)=> {
+          
+          const peer2 = new Peer("127.0.0.1",3000, 3001, 3003, new Repository(Levelupdb))
+          peer2.repository.createCollection("blockchain")
+          .then(() => {
+            peer2.readBlockchain()
+            .then((bcnow) => {
+               peer2.repository.db.close('blockchain')
+              
+              const peerBc = peer2.getBlockchain()
+              expect(peerBc.getLength()).to.eql(20)
+              expect(peerBc.getLatestBlockId()).to.eql("xxxxx")
+              expect(peerBc.getLatestBlockIndex()).to.eql(30)
+              done()
+            })
+          })
+          
+          
+        })
+      })
+    })
+    
+  })
+
+ 
+
+  it("should throw an error when trying to read a peers's blockchain record from the repository, if it doesn't exist", (done) => {
+    const peer = new Peer("127.0.0.1",3000, 3001, 3002, new Repository(Levelupdb))
+    peer.repository.deleteCollection("blockchain")
+    .then(()=> {
+      peer.repository.createCollection("blockchain")
+      .then(() => {
+        peer.readBlockchain()
+       
+        .catch((error) => {
+          
+         expect(error.status).to.eql(404)
+          peer.repository.db.close('blockchain')
+           .then(() => {
+            done()
+           })
+
+        })
+      })
+    })
+      
+    
+  }) 
 
   it("gets the blockchain property of the peer", (done) => {
     const peer = new Peer("127.0.0.1",3000, 3001, 3002, new Repository(Levelupdb))
@@ -234,6 +298,9 @@ describe('Peer Instantiation', () => {
             done()
           })
           
+        })
+        .catch(error => {
+          console.log(error)
         })
   
     })
@@ -265,6 +332,25 @@ describe('Peer Instantiation', () => {
     const peer = new Peer("127.0.0.1",3000, 3001, 3002, new Repository(Levelupdb))
     peer.setTransactionPoolSize(100)
     expect(peer.getTransactionPoolSize()).to.eql(100)
+
+    
+    done()
+
+  })
+
+  it("sets the transaction pool threshold of a peer", (done) => {
+    const peer = new Peer("127.0.0.1",3000, 3001, 3002, new Repository(Levelupdb))
+    expect(peer.setTransactionPoolThreshold(1000)).to.eql(1000)
+
+    expect(peer.transactionPoolThreshold).to.eql(1000)
+    done()
+
+  })
+
+  it("gets the transaction pool threshold of a peer", (done) => {
+    const peer = new Peer("127.0.0.1",3000, 3001, 3002, new Repository(Levelupdb))
+    peer.setTransactionPoolThreshold(1000)
+    expect(peer.getTransactionPoolThreshold()).to.eql(1000)
 
     
     done()
@@ -631,6 +717,31 @@ describe("Peer transaction processing", () => {
       
   })
 
+  it("should start the mining countdown process when adding a transaction that takes the transaction pool size over a threshold", (done) => {
+   
+    const peerSpy = sinon.stub(peer, "startMiningCountdownProcess").callsFake(() => {
+      return(true)
+    })
+    peer.setTransactionPoolThreshold(4000)
+
+    const transaction1 = new Transaction({'consignmentid':'cabcdefi','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey})
+    const transaction2 = new Transaction({'consignmentid':'cabcdefi','data':{"somemore":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey})
+    const transaction3 = new Transaction({'consignmentid':'cabcdefi','data':{"evenmore":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey})
+  
+    const promises = [peer.addTransaction(transaction1),peer.addTransaction(transaction2),peer.addTransaction(transaction3)]
+     
+     Promise.all(promises)
+     .then(() => {
+      const transaction4 = new Transaction({'consignmentid':'cabcdefi','data':{"yetmore":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey})
+      peer.addTransaction(transaction4)
+      .then(() => {
+         expect(peerSpy.calledWith(nconf.get("defaultminingcountdown"))).to.be.true
+        done()
+      })
+
+     })
+  })
+
 })
 
 describe("Peer block processing", () => {
@@ -751,30 +862,59 @@ describe("Peer block processing", () => {
 
   
   })
-  it("should add a new block to the database, and update the blockchain object", (done) => {
+  it("should add a new block to the database, update the blockchain object, and remove the block's transactions from the transactionsPool", (done) => {
     
       const transactions1 = [
         
       ]
       transactions1.push(new Transaction({'consignmentid':'cabcdefg','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
-      transactions1.push(new Transaction({'consignmentid':'cabcdefh','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
-      transactions1.push(new Transaction({'consignmentid':'cabcdefi','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+      transactions1.push(new Transaction({'consignmentid':'cabcdefh','data':{"somemore":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+      transactions1.push(new Transaction({'consignmentid':'cabcdefi','data':{"yetmore":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
       
-      const block1 = new Block({"previousHash":peer.blockchain.getLatestBlockId(),"transactions":transactions1, "index":1})
+      const remainingTransaction = new Transaction({'consignmentid':'cabcdefj','data':{"stillyetmore":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey})      //add transactions to the transactionPool
 
-      const l = peer.blockchain.getLength()
-      peer.addBlock(block1).then(result => {
-        expect(result).to.eql(block1)
-        expect(peer.blockchain.getLatestBlockId()).to.eql(block1.id)
-        expect(peer.blockchain.getLatestBlockIndex()).to.eql(block1.index)
-        expect(peer.blockchain.length).to.eql(l + 1)
-        peer.repository.getBlock(result.id)
-        .then((blk) => {
-          expect(blk.id).to.eql(result.id)
-          done()
-        })
-        
+      const promises = transactions1.map((trans) => {
+        return peer.addTransaction(trans)
       })
+
+      Promise.all(promises)
+      .then(() => {
+        return peer.addTransaction(remainingTransaction)
+
+      })
+      .then(() => {
+        const block1 = new Block({"previousHash":peer.blockchain.getLatestBlockId(),"transactions":transactions1, "index":1})
+
+        const l = peer.blockchain.getLength()
+        peer.addBlock(block1).then(result => {
+          expect(result).to.eql(block1)
+          expect(peer.blockchain.getLatestBlockId()).to.eql(block1.id)
+          expect(peer.blockchain.getLatestBlockIndex()).to.eql(block1.index)
+          expect(peer.blockchain.length).to.eql(l + 1)
+          peer.repository.getBlock(result.id)
+          .then((blk) => {
+            expect(blk.id).to.eql(result.id)
+            //check that only the remaining transaction is left
+            peer.repository.getTransaction(remainingTransaction.id)
+            .then((rt) => {
+              expect(rt.id).to.eql(remainingTransaction.id) // transaction should be still there
+              //but none of the others
+              peer.repository.getAllTransactions()
+              .then(transactions => {
+                expect(transactions.length).to.eql(1) //remaining transaction 
+                done()
+              })
+              
+            })
+
+            
+          })
+          
+        })
+
+      })
+
+      
       
 
   
@@ -1851,7 +1991,11 @@ describe("mining", () => {
               setTimeout(() => {
                 expect(peer.miningCountdownProcess).to.eql(null)
                 expect(peer.getState()).to.eql("running")
-                done()
+                peer.deleteCollections()
+                .then(() => {
+                  done()
+                })
+                
               },500)
              
             })
@@ -1872,5 +2016,45 @@ describe("mining", () => {
 
 
   })
+
+  it("should mine a block on successfull end to the mining countdown process", (done)=> {
+    const peer = new Peer("127.0.0.1",3000, 3001,3002, new Repository(Levelupdb))
+    peer.setState("mining")
+    peer.setTransactionPoolThreshold(3000)
+    peer.createCollections().then(() => {
+       //create some transactions
+      const transaction1 = new Transaction({'consignmentid':'cabcdefg','datatype':'application/json','data':{"some":"arbitrary","json":"data"},"publickey":publicKey})
+      const transaction2 = new Transaction({'consignmentid':'cabcdefg','datatype':'application/json','data':{"someother":"arbitrary","json":"data"},"publickey":publicKey})
+      const transaction3 = new Transaction({'consignmentid':'cabcdefg','datatype':'application/json','data':{"yetmore":"arbitrary","json":"data"},"publickey":publicKey})
+
+
+      const transactions = [transaction1, transaction2, transaction3]
+
+      //add the transactions to the peer
+      const promises = transactions.map((trans) => {
+        peer.repository.addTransaction(trans)
+      })
+
+      Promise.all(promises)
+      .then(() => {
+        const blockchain = new Blockchain({"latestblockid": "fakeid", "latestblockindex": 0, "length":1})
+        peer.setBlockchain(blockchain).then(() => {
+          peer.miningCountdownSuccessCallback(100) //success
+          .then((newBlock) => {
+            expect(newBlock.index).to.eql(1)
+            expect(peer.getState()).to.eql("running")
+            peer.deleteCollections().then(() => {
+              done()
+            })
+          })
+        })
+        
+        
+        
+      })
+    })
+  })
+
+
 })
 

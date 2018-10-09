@@ -9,8 +9,10 @@ const Transaction = require('../transaction/transaction').Transaction
 
 const Block = require('../block/block').Block
 
-const Blockchain = require('../blockchain/blockchain').Blockchain
 
+//const Blockchain = require('../blockchain/blockchain').Blockchain
+
+//console.log("Blockchain in repository.js is: " + Blockchain)
 
 class Repository{
   constructor(db){
@@ -78,7 +80,7 @@ class Repository{
   }
 
   addBlock(block){
-
+    
     if(Block.validate(block)){ //only add a valid block
       return this.db.saveRecord('blocks', block.id,block)
     }
@@ -121,9 +123,12 @@ class Repository{
   }
 
 
+//lazy require Blockchain because of circular dependency
+
   addBlockchain(blockchain){
 
-    if(Blockchain.validate(blockchain)){ //only add a valid block
+    
+    if(require('../blockchain/blockchain').Blockchain.validate(blockchain)){ //only add a valid blockchain
       return this.db.saveRecord('blockchain', blockchain.id,blockchain)
     }
     else{
@@ -136,6 +141,7 @@ class Repository{
     return new Promise((resolve, reject) => {
       this.db.getRecord('blockchain',blockchainid)
       .then((record) => {
+        const Blockchain = require('../blockchain/blockchain').Blockchain
         const blockchain = new Blockchain(record)
         resolve(blockchain)
       })

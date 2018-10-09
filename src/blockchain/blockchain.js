@@ -2,6 +2,8 @@
 
 const crypto = require('crypto')
 const nconf = require('../config/conf.js').nconf
+const Block = require('../block/block.js').Block
+const Repository = require('../repository/repository.js').Repository
 
 
 class Blockchain{
@@ -105,6 +107,39 @@ class Blockchain{
   
     if(hash === blockchain.hash)return true
     return false
+
+  }
+
+  static async validateBlocks(blockchain, repository){
+    
+      let currentBlockid = blockchain.latestblockid
+    //step back throught the blocks in the repository, validating as we go
+    let done = false
+    let isValid = true
+    do{
+      try{
+        let block = await repository.getBlock(currentBlockid)
+        
+        
+        if(block.isOriginBlock()){
+          done = true
+        }
+        else{
+           currentBlockid = block.previousHash
+        }
+      }catch(error){
+
+        done = true
+        isValid = false
+      }
+      
+
+
+    }while(!done)
+
+
+    return(isValid)
+
 
   }
 
