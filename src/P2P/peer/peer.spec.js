@@ -10,7 +10,7 @@ const should = chai.should()
 
 chai.use(chaiAsPromised)
 
-const logger = require('../../logger/logger.js')(module)
+//const logger = require('../../logger/logger.js')(module)
 
 const nconf = require('../../config/conf.js').nconf
 
@@ -29,6 +29,8 @@ const Block = require('../../block/block').Block
 const Message = require('../../message/message').Message
 
 const Blockchain = require("../../blockchain/blockchain").Blockchain
+
+const request = require('supertest')
 
 const fs = require('fs')
 
@@ -708,6 +710,61 @@ describe("Peer transaction processing", () => {
       peer.getRepositoryTransactionPoolSize()
       .then(result => {
         (typeof result).should.eql('number')
+        done()
+      })
+      
+
+     })
+      
+      
+  })
+
+  it("should remove transactions", (done) => {
+
+    const transaction1 = new Transaction({'consignmentid':'cabcdefi','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey})
+    const transaction2 = new Transaction({'consignmentid':'cabcdefi','data':{"somemore":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey})
+    const transaction3 = new Transaction({'consignmentid':'cabcdefi','data':{"evenmore":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey})
+  
+    const promises = [peer.addTransaction(transaction1),peer.addTransaction(transaction2),peer.addTransaction(transaction3)]
+     
+     Promise.all(promises)
+     .then(() => {
+      peer.removeTransactions([transaction1.id,transaction2.id,"feefifo"])
+      .then(result => {
+        peer.repository.getTransaction(transaction1.id)
+        .catch(() => { //should have thrown an error
+          peer.repository.getTransaction(transaction2.id)
+          .catch(() => { //should have thrown an error
+            peer.repository.getTransaction(transaction3.id)
+            .then(result => {
+              expect(result.id).to.eql(transaction3.id)
+              done()
+            })
+          })
+          
+        })
+        
+      })
+      
+
+     })
+      
+      
+  })
+
+   it("should gather transactions", (done) => {
+
+    const transaction1 = new Transaction({'consignmentid':'cabcdefi','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey})
+    const transaction2 = new Transaction({'consignmentid':'cabcdefi','data':{"somemore":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey})
+    const transaction3 = new Transaction({'consignmentid':'cabcdefi','data':{"evenmore":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey})
+  
+    const promises = [peer.addTransaction(transaction1),peer.addTransaction(transaction2),peer.addTransaction(transaction3)]
+     
+     Promise.all(promises)
+     .then(() => {
+      peer.gatherTransactions(2000)
+      .then(result => {
+        expect(result.length).to.eql(1)
         done()
       })
       
@@ -2055,6 +2112,103 @@ describe("mining", () => {
     })
   })
 
+
+})
+
+describe("webserver", () => {
+
+   let app = null
+  before((done) => {
+    
+     discoveryServer.startServer(3000, 3001).then(serv => {
+      app = serv
+      done()
+    })
+  })
+
+  after((done) => {
+      discoveryServer.getSwarm().destroy()
+      app.close()
+      app = null
+      done()
+      
+    
+  })
+
+  it("starts the webserver", (done) => {
+     const peer = new Peer("127.0.0.1",3000, 3001,3002, new Repository(Levelupdb))
+
+     peer.startWebServer(3003,peer).then(() => {
+      expect(peer.webServer).to.not.eql(null)
+      peer.webServer.close()
+      done()
+     })
+
+  })
+
+   it('can post a new transaction', (done) => {
+
+     const peer = new Peer("127.0.0.1",3000, 3001,3002, new Repository(Levelupdb))
+     peer.createCollections()
+     .then(() => {
+
+       peer.startWebServer(peer, 3003).then(() => {
+          request(peer.webServer)
+          .post('/transactions')
+          .send({'consignmentid':'cabcdefi',
+            'data':{"some":"arbitrary","json":"data"},
+            'datatype':'application/json'
+          })
+          .set('Content-Type','application/json')
+          .set('Accept','aplication/json')
+          .expect(201)
+          .then((res) => {
+            expect(res.body.consignmentid).to.eql('cabcdefi')
+            peer.repository.getTransaction(res.body.id)
+            .then(trans => {
+              expect(trans.id).to.eql(res.body.id) //it is in the transaction pool
+              peer.deleteCollections().then(() => {
+                 peer.webServer.close()
+                done()
+              })
+              
+            })
+            
+          })
+
+        })
+     })
+
+    
+  })
+
+   it('returns a BAD REQUEST error when trying to post an invalid  transaction', (done) => {
+
+     const peer = new Peer("127.0.0.1",3000, 3001,3002, new Repository(Levelupdb))
+     peer.createCollections()
+     .then(() => {
+
+       peer.startWebServer(peer, 3003).then(() => {
+          request(peer.webServer)
+          .post('/transactions')
+          .send({'fee':'foo',
+          })
+          .set('Content-Type','application/json')
+          .set('Accept','aplication/json')
+          .expect(400)
+          .then(res => {
+            peer.deleteCollections().then(() => {
+                 peer.webServer.close()
+                done()
+              })
+          })
+          
+
+        })
+     })
+
+    
+  })
 
 })
 

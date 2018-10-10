@@ -4,7 +4,7 @@
   "description": "",
   "main": "peer.js",
   "scripts": {
-    "test": "mocha -R spec --reporter-options toConsole=true  *.spec.js --conf=testconfig.json"
+    "test": "mocha -R spec --reporter-options toConsole=true  *.spec.js --grep 'gather' --conf=testconfig.json"
   },
   "author": "",
   "license": "ISC",
@@ -13,11 +13,14 @@
     "chai-as-promised": "^7.1.1",
     "mocha": "^5.2.0",
     "should": "^13.2.3",
-    "sinon": "^6.1.5"
+    "sinon": "^6.1.5",
+    "supertest": "^3.3.0"
   },
   "dependencies": {
     "duplex-json-stream": "^1.0.1",
+    "express": "^4.16.3",
     "fully-connected-topology": "^1.1.1",
+    "http-status": "^1.2.0",
     "request": "^2.87.0",
     "request-promise-native": "^1.0.5"
   }

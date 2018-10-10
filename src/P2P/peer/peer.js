@@ -10,6 +10,8 @@ const topology = require('fully-connected-topology')
 const jsonStream = require('duplex-json-stream')
 const { fork } = require('child_process')
 
+const webServer = require('./webServer')
+
 const logger = require('../../logger/logger.js')(module)
 const nconf = require('../../config/conf.js').nconf
 
@@ -60,6 +62,8 @@ class Peer {
     this.transactionPoolSize = 0
     this.transactionPoolThreshold = nconf.get("defaulttpthreshold")
     this.miningCountdown = nconf.get("defaultminingcountdown")
+
+    this.webServer = null
 
   }
 
@@ -657,6 +661,21 @@ class Peer {
       }
 
     })
+    
+  }
+
+  //WEBSERVER
+
+  startWebServer(port){
+    return new Promise((resolve, reject) => {
+      webServer.startServer(this, port)
+      .then(server => {
+        this.webServer = server
+        resolve(this.webServer)
+      })
+
+    })
+
     
   }
 
