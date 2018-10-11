@@ -80,7 +80,6 @@ class Repository{
   }
 
   addBlock(block){
-    
     if(Block.validate(block)){ //only add a valid block
       return this.db.saveRecord('blocks', block.id,block)
     }

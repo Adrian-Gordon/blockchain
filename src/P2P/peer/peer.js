@@ -64,6 +64,7 @@ class Peer {
     this.miningCountdown = nconf.get("defaultminingcountdown")
 
     this.webServer = null
+    this.listenInterval = null
 
   }
 
@@ -404,6 +405,19 @@ class Peer {
 
   popMessage(){
     return(this.messageQueue.shift())
+  }
+
+  listen(time){
+    this.listenInterval = setInterval(() =>{
+      let message = this.popMessage()
+      if(message){
+        this.processReceivedMessage(message)
+      }
+    }, time)
+  }
+
+  stopListening(){
+    clearInterval(this.listenInterval)
   }
 
   processReceivedMessage(message){

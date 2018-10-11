@@ -1,0 +1,19 @@
+{
+  "name": "e2e",
+  "version": "1.0.0",
+  "main": "runPeer.js",
+  "scripts": {
+    "test": "mocha -R spec --reporter-options toConsole=true *.spec.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "nconf": "^0.10.0"
+  },
+  "devDependencies": {
+    "chai": "^4.2.0",
+    "mocha": "^5.2.0",
+    "supertest": "^3.3.0"
+  },
+  "description": ""
+}

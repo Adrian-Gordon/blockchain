@@ -1,0 +1,14 @@
+{
+  "hashalgorithm":"SHA256",
+  "signatureformat":"hex",
+  "privatekeyurl":"./id_rsa.pem",
+  "publickeyurl":"./id_rsa.pub",
+  "dbpath":"./data/",
+  "defaulttpthreshold": 5000,
+  "defaultminingcountdown":1000,
+  "discoveryserverurl":"127.0.0.1",
+  "discoveryserverport":3000,
+  "discoveryservermessageport":3001,
+  "port":3006,
+  "webserverport":3007
+}

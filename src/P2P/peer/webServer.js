@@ -20,8 +20,7 @@ const Message = require('../../message/message').Message
 
 let expressApp = null
 
-const startServer = (port, peer) => {
-
+const startServer = (peer, port) => {
   return new Promise((resolve, reject) => {
     expressApp = express()
     expressApp.peer = peer
@@ -57,6 +56,26 @@ const startServer = (port, peer) => {
         
       
     })
+    expressApp.get('/transactions',(req, res, next) => {
+      expressApp.peer.repository.getAllTransactions()
+      .then(transactions => {
+        res.status(status.OK).send(transactions)
+      })
+      .catch(error => {
+        res.status(status.BAD_REQUEST).send(error)
+      })
+    })
+
+    expressApp.get('/blocks',(req, res, next) => {
+      expressApp.peer.repository.getAllBlocks()
+      .then(blocks => {
+        res.status(status.OK).send(blocks)
+      })
+      .catch(error => {
+        res.status(status.BAD_REQUEST).send(error)
+      })
+    })
+
 
 
     const server = expressApp.listen(port, () => {
