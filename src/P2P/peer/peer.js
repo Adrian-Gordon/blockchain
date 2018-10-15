@@ -160,7 +160,7 @@ class Peer {
         resolve(this.blockchain)
       })
       .catch((error) => {
-        console.log("setblockchain err: " + error)
+       logger.error("setblockchain err: " + error)
         reject(error)
       })
     })
@@ -412,6 +412,9 @@ class Peer {
       let message = this.popMessage()
       if(message){
         this.processReceivedMessage(message)
+        .catch(err => {
+          logger.error(err)
+        })
       }
     }, time)
   }
@@ -542,17 +545,22 @@ class Peer {
             }
             else if(message.action == "addtransaction"){
               try{
+              //  logger.info(message.data)
                 const transaction = Transaction.deserialize(message.data)
+               // logger.info(JSON.stringify(transaction))
                 this.addTransaction(transaction)
                 .then((result) => {
                   resolve(result)
                 })
-                .catch((error) => {
-                  reject(error)
+                .catch((err) => {
+                  logger.error(err)
+                  logger.error(message.data)
+                  reject(err)
                 })
 
-              }catch(error){
-                reject(error.message)
+              }catch(err){
+                logger.error(err)
+                reject(err.message)
               }
 
             }
@@ -604,7 +612,7 @@ class Peer {
           resolve(newBlock)
         })
         .catch(error => {
-          console.log(error)
+         logger.error(error)
           reject(error)
         })
         

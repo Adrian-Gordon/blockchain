@@ -1,8 +1,8 @@
 {
   "hashalgorithm":"SHA256",
   "signatureformat":"hex",
-  "privatekeyurl":"./id_rsa.pem",
-  "publickeyurl":"./id_rsa.pub",
+  "privatekeyurl":"./private.pem",
+  "publickeyurl":"./public.pem",
   "dbpath":"./data/",
   "defaulttpthreshold": 5000,
   "defaultminingcountdown":1000,

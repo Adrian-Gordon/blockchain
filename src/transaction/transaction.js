@@ -3,13 +3,14 @@
 const crypto = require('crypto')
 const nconf = require('../config/conf.js').nconf
 const fs = require('fs')
+const logger = require('../logger/logger.js')(module)
 
 
 const privateKey = fs.readFileSync(nconf.get('privatekeyurl'),'utf8')
 const publicKey = fs.readFileSync(nconf.get('publickeyurl'),'utf8')
 
 class Transaction{
-  constructor({consignmentid,data, publickey, timestamp, id, datatype}){
+  constructor({consignmentid,data, publickey, timestamp, id, datatype, signature}){
 
     if(typeof datatype === 'undefined'){
       throw new Error("no transaction datatype provided")
@@ -35,7 +36,13 @@ class Transaction{
       this.data = data
     else this.data = JSON.stringify(data)
     this.publickey = publickey
-    this.signature = Transaction.sign(this)
+
+    if(typeof signature == 'undefined'){
+      this.signature = Transaction.sign(this)
+    }
+    else{
+      this.signature = signature
+    }
     if(typeof id !== 'undefined')
       this.id = id
     else this.id = Transaction.createHash(this)
@@ -58,19 +65,25 @@ class Transaction{
 
   static deserialize(str){
     const obj = JSON.parse(str)
+  //  logger.info(JSON.stringify(obj))
   
     return new Transaction(obj)
 
   }
 
   static createHash(transaction){
+    //logger.info(transaction.consignmentid + transaction.timestamp +transaction.datatype + transaction.data + transaction.publickey + transaction.signature)
     return crypto.createHash(nconf.get('hashalgorithm')).update(transaction.consignmentid + transaction.timestamp +transaction.datatype + transaction.data + transaction.publickey + transaction.signature).digest('hex')
 
   }
 
   static validate(transaction){
+   // logger.info(transaction.consignmentid + transaction.timestamp +transaction.datatype + transaction.data + transaction.publickey + transaction.signature)
+
     const hash = crypto.createHash(nconf.get('hashalgorithm')).update(transaction.consignmentid + transaction.timestamp + transaction.datatype + transaction.data + transaction.publickey + transaction.signature).digest('hex')
   
+   // logger.info(hash)
+   // logger.info(transaction.id)
     if(hash === transaction.id)return true
     return false
 
