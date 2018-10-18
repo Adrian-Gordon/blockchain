@@ -33,6 +33,7 @@ const startServer = (peer, port) => {
 
         //set the publicKey
         inputTrans.publickey = publicKey
+        //console.log(JSON.stringify(inputTrans))
 
         const transaction = new Transaction(inputTrans)
 

@@ -5,7 +5,6 @@ const nconf = require('../config/conf.js').nconf
 const fs = require('fs')
 const logger = require('../logger/logger.js')(module)
 
-
 const privateKey = fs.readFileSync(nconf.get('privatekeyurl'),'utf8')
 const publicKey = fs.readFileSync(nconf.get('publickeyurl'),'utf8')
 

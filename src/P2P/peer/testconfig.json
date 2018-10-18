@@ -5,5 +5,7 @@
   "publickeyurl":"./publickey.pem",
   "dbpath":"../../database/leveldb/data/",
   "defaulttpthreshold": 10000,
-  "defaultminingcountdown":100
+  "defaultminingcountdown":100,
+  "minimumminingcountdown":0,
+  "miningcountdownprocesspath":"./miningCountdownProcess.js"
 }

@@ -14,10 +14,14 @@ class Levelupdb{
   static open(collectionName){
     return new Promise((resolve, reject) => {
       levelup(leveldown(Levelupdb.dbpath + collectionName),{}, (err, db) => {
-        if(err) reject(err)
-        Levelupdb.collections[collectionName] = db
+        if(err) {
+          reject(err)
+        }
+        else{
+          Levelupdb.collections[collectionName] = db
         //logger.info(JSON.stringify(Levelupdb.collections))
-        resolve(true)
+          resolve(true)
+        }
       })
     })
 
@@ -29,8 +33,11 @@ class Levelupdb{
       if(typeof db == 'undefined'){
         reject('collection: ' + collectionName + ' does not exist')
       }
-      delete Levelupdb.collections[collectionName]
-      resolve(db.close())
+      else {
+        delete Levelupdb.collections[collectionName]
+       resolve(db.close())
+      }
+      
 
       })
     

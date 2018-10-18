@@ -24,11 +24,12 @@ peer.deleteCollections()
 
 .then(() => {
    //add an origin block
-    originBlock = new Block({"previousHash": "-1", "transactions":[],"index":0})
+    originBlock = new Block({"previousHash": "-1", "transactions":[],"index":0, "timestamp":0})
       //save to the database
     return peer.repository.addBlock(originBlock)
 })
 .then(() => {
+  //console.log("runPeer: " + JSON.stringify(blocks))
   const blockchain = new Blockchain({"latestblockid": originBlock.id, "latestblockindex": originBlock.index, "length":1})
   return peer.setBlockchain(blockchain)
 })

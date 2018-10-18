@@ -38,13 +38,13 @@ class Block{
       }
     }
     if(typeof timestamp !== 'undefined'){
-      if(typeof id == 'undefined'){
+      if((timestamp > 0) && (typeof id == 'undefined')){
          throw new Error("both timestamp and id must be provided for a de-serialised Block")
       }
     }
 
     //It's a de-serialised block
-    if(typeof id !== 'undefined' && typeof timestamp !== 'undefined'){
+    if(typeof id !== 'undefined' && typeof timestamp !== 'undefined' && timestamp > 0){
       if(typeof transactions !== 'string'){
         throw new Error("transactions must be stringified for a de-serialised Block")
       }
@@ -53,6 +53,13 @@ class Block{
       this.previousHash = previousHash
       this.transactions = transactions
       this.id = id
+    }
+    else if(timestamp == 0){                //it's a genesis block
+      this.index = index
+      this.timestamp = timestamp
+      this.previousHash = previousHash
+      this.transactions = transactions
+      this.id =  Block.createHash(this)
     }
     else{ //block to be created from stratch
       if(!Array.isArray(transactions)){
@@ -71,7 +78,9 @@ class Block{
 
         transactionsArray.push(transactions[i].serialize())
       }
+      
       this.timestamp = Math.round((new Date().getTime()/1000))
+
       this.previousHash = previousHash
       this.transactions = JSON.stringify(transactionsArray)
       this.index = index
@@ -80,7 +89,10 @@ class Block{
     }
 
     //Final validation
-    if(Block.validate(this))return(this)
+    if(Block.validate(this)){
+      //console.log("new BlocK :" + JSON.stringify(this))
+      return(this)
+    }
     else throw new Error("block is invalid")
 
 

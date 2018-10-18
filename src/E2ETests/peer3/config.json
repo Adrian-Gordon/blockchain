@@ -6,6 +6,8 @@
   "dbpath":"./data/",
   "defaulttpthreshold": 5000,
   "defaultminingcountdown":1000,
+  "minimumminingcountdown":100,
+  "miningcountdownprocesspath":"../../P2P/peer/miningCountdownProcess.js",
   "discoveryserverurl":"127.0.0.1",
   "discoveryserverport":3000,
   "discoveryservermessageport":3001,

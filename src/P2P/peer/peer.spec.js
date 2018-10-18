@@ -836,7 +836,7 @@ describe("Peer transaction processing", () => {
       const transaction4 = new Transaction({'consignmentid':'cabcdefi','data':{"yetmore":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey})
       peer.addTransaction(transaction4)
       .then(() => {
-         expect(peerSpy.calledWith(nconf.get("defaultminingcountdown"))).to.be.true
+         expect(peerSpy.calledWith(nconf.get("minimumminingcountdown"),nconf.get("defaultminingcountdown"))).to.be.true
         done()
       })
 
@@ -2019,7 +2019,7 @@ describe("mining", () => {
       peer.miningCountdownProcess = null
       return(true)
     })
-     peer.startMiningCountdownProcess(500)
+     peer.startMiningCountdownProcess(0,500)
      expect(peer.miningCountdownProcess).to.not.eql(null)
      setTimeout(()=> {
       expect(peerSpy.called).to.be.true
@@ -2036,7 +2036,7 @@ describe("mining", () => {
   it("should pre-empt a running mining countdown process", (done) => {
      const peer = new Peer("127.0.0.1",3000, 3001,3002, new Repository(Levelupdb))
      
-     peer.startMiningCountdownProcess(500)
+     peer.startMiningCountdownProcess(0,500)
      expect(peer.miningCountdownProcess).to.not.eql(null)
      setTimeout(() => {
       peer.miningCountdownProcess.send("pre-empt")
@@ -2084,7 +2084,7 @@ describe("mining", () => {
 
             const addBlockMessage = new Message({peer:"127.0.0.1:4000", action:"addblock", data: blockStr})
 
-             peer.startMiningCountdownProcess(1500)
+             peer.startMiningCountdownProcess(0,1500)
              
             //process the received message
             peer.processReceivedMessage(addBlockMessage)

@@ -62,6 +62,7 @@ class Peer {
     this.transactionPoolSize = 0
     this.transactionPoolThreshold = nconf.get("defaulttpthreshold")
     this.miningCountdown = nconf.get("defaultminingcountdown")
+    this.minimumMiningCountdown = nconf.get("minimumminingcountdown")
 
     this.webServer = null
     this.listenInterval = null
@@ -231,8 +232,11 @@ class Peer {
         reject("block index less than or equal to latest")
       else if((block.index - this.blockchain.getLatestBlockIndex())> 1)
         reject("block index greater than next index")
-      else if(block.previousHash !== this.blockchain.getLatestBlockId())
+      else if(block.previousHash !== this.blockchain.getLatestBlockId()){
+        logger.info(JSON.stringify(block))
+        logger.info(JSON.stringify(this.blockchain))
         reject("block previousHash not hash of latest block")
+      }
 
       else{
         this.repository.addBlock(block).then(result => {
@@ -279,8 +283,9 @@ class Peer {
         if(result == 'OK'){
           this.setTransactionPoolSize(this.getTransactionPoolSize() + transaction.getSize())
           //kick off mining process, if transaction tkes us over threhold size
-          if(this.getTransactionPoolSize() > this.getTransactionPoolThreshold()){
-            this.startMiningCountdownProcess(this.miningCountdown)
+          //logger.info("poolsize: " + this.getTransactionPoolSize() + " threshold: " + this.getTransactionPoolThreshold())
+          if((this.getTransactionPoolSize() > this.getTransactionPoolThreshold())&& (this.getState()=="running")){
+            this.startMiningCountdownProcess(this.minimumMiningCountdown,this.miningCountdown)
           }
           resolve(transaction)
         }
@@ -426,13 +431,12 @@ class Peer {
   processReceivedMessage(message){
 
     return new Promise((resolve, reject) => {
-    
       if(this.getState() == "awaitingblockchain"){
         if(message.action !== 'blocks'){
           resolve(false)
         }
         else{
-
+          this.setState("running")
           this.repository.deleteCollection("blocks")
           .then(() => {
             this.repository.createCollection("blocks")
@@ -449,9 +453,23 @@ class Peer {
                             latestBlockIndex = block.index
                             latestBlockid = block.id
                           }
+
+                          if(block.transactions.length > 0){
+
+                            const transToDelete = JSON.parse(block.transactions) //deserialise the transactions
+                            
+                            const transactionIds = transToDelete.map(t => {
+                             
+                              return JSON.parse(t).id
+                            })
+
+                
+                            this.removeTransactions(transactionIds) //remove any of this block transactions from the transaction pool
+                          }
                           return(this.repository.addBlock(block)) //add directly to the repository - they could be in any order
 
                         }catch(error){
+                          logger.error(error)
                           return Promise.reject(error)
                         }
                         
@@ -469,13 +487,21 @@ class Peer {
                         .then(() => {
                           resolve(true)
                         })
+                        .catch(error => {
+                          logger.error(error)
+                          resolve(false)
+                        })
                       })
                       .catch(error => {
-            
+                        logger.error(error)
                         resolve(false)
                       })
                       
-                   })  
+                   })
+                   .catch(error => {
+                    logger.error(error)
+                    resolve(false)
+                   })
           })
         }
  
@@ -583,7 +609,8 @@ class Peer {
 
   }
 
-  sendMessage(peer, action, data, type){
+  sendMessage(peer, action, data, type){ + type
+   
     if(typeof type == 'undefined') type = 'private'
     const socket = this.connectedPeers[peer]
 
@@ -651,16 +678,21 @@ class Peer {
     
   }
 
-  startMiningCountdownProcess(timeout){
+  startMiningCountdownProcess(minimumtimeout,timeout){
 
+   
     this.setState("mining")
 
-    this.miningCountdownProcess = fork('./miningCountdownProcess.js',['' + timeout])
+    const countdown = minimumtimeout + Math.floor(Math.random() * timeout)
+     console.log("startMiningCountdownProcess " + countdown)
+
+    this.miningCountdownProcess = fork(nconf.get("miningcountdownprocesspath"),['' + countdown])
 
     this.miningCountdownProcess.on('exit',this.miningCountdownSuccessCallback.bind(this))
   }
 
   miningCountdownSuccessCallback(code){
+    console.log("miningCountdownSuccessCallback")
     return new Promise((resolve,reject) => {
       //console.log(`child exited with code ${code}`)
       if(code == 100){ //success
@@ -670,6 +702,8 @@ class Peer {
           this.mineBlock(transactions)
           .then((newBlock) => {
             this.setState("running")
+           // logger.info("miningCountdownSuccessCallback success")
+          //  logger.info(JSON.stringify(newBlock))
             resolve(newBlock)
           })
           
@@ -679,6 +713,7 @@ class Peer {
       if(code == 200){ //failure - has been pre-empted
         this.setState("running")
         this.miningCountdownProcess = null
+        logger.info("miningCountdownSuccessCallback pre-empted")
         resolve(true)
       }
 
