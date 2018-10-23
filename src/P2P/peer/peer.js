@@ -124,7 +124,10 @@ class Peer {
       .then(() => {
         this.repository.createCollection("blockchain")
         .then(() => {
-          resolve(true)
+          this.repository.createCollection("consignmentindex")
+          .then(() => {
+            resolve(true)
+          })
         })
           
       })
@@ -142,7 +145,8 @@ class Peer {
     const promises = [
     this.repository.deleteCollection("transactionpool"),
     this.repository.deleteCollection("blocks"),
-    this.repository.deleteCollection("blockchain")
+    this.repository.deleteCollection("blockchain"),
+    this.repository.deleteCollection("consignmentindex")
     ]
 
     return Promise.all(promises)
@@ -233,14 +237,16 @@ class Peer {
       else if((block.index - this.blockchain.getLatestBlockIndex())> 1)
         reject("block index greater than next index")
       else if(block.previousHash !== this.blockchain.getLatestBlockId()){
-        logger.info(JSON.stringify(block))
-        logger.info(JSON.stringify(this.blockchain))
+       // logger.info(JSON.stringify(block))
+       // logger.info(JSON.stringify(this.blockchain))
         reject("block previousHash not hash of latest block")
       }
 
       else{
         this.repository.addBlock(block).then(result => {
           if(result == 'OK'){
+
+
             
             this.blockchain.setLatestBlockId(block.id)
             this.blockchain.setLatestBlockIndex(block.index)
@@ -248,12 +254,22 @@ class Peer {
             this.blockchain.hash = Blockchain.createHash(this.blockchain)
             this.repository.addBlockchain(this.blockchain)
             .then(()=> {
-              const transToDelete = JSON.parse(block.transactions) //deserialise the transactions
-              
-              this.removeTransactions(transToDelete.map(t => {return JSON.parse(t).id}))
-              .then(() => {
-                 resolve(block)
+              const transToIndexAndDelete = JSON.parse(block.transactions) //deserialise the transactions
+
+              const indexPromises = transToIndexAndDelete.map(t => {
+                return this.indexBlock(block, JSON.parse(t).consignmentid)
               })
+
+              Promise.all(indexPromises)
+              .then(() => {
+                this.removeTransactions(transToIndexAndDelete.map(t => {return JSON.parse(t).id}))
+                .then(() => {
+                   resolve(block)
+                })
+              })
+
+              
+              
              
             })
             
@@ -264,6 +280,46 @@ class Peer {
         })
       }
       
+    })
+
+    
+  }
+
+  indexBlock(block,  consignmentid){
+    
+    return new Promise((resolve, reject) => {
+      
+      this.repository.getConsignmentIndex(consignmentid)
+      .then(consignmentIndexRecord => {                                   //there is an existing index record
+          if(!consignmentIndexRecord.blockids.includes(block.id)){
+            consignmentIndexRecord.blockids.push(block.id)                //add to it
+            this.repository.addConsignmentIndex(consignmentIndexRecord)
+            .then(()=> {
+              
+              resolve(consignmentIndexRecord)
+            })
+            
+          }
+          else{
+            
+            resolve(consignmentIndexRecord)
+          }
+      })
+      .catch(error => {                                             //create a new index record
+         const  consignmentIndexRecord = {        
+            id: consignmentid,
+            blockids: [block.id]
+          }      
+         
+          this.repository.addConsignmentIndex(consignmentIndexRecord)
+          .then(() => {
+
+            resolve(consignmentIndexRecord)
+          })
+      })
+
+
+
     })
 
     
@@ -429,7 +485,7 @@ class Peer {
   }
 
   processReceivedMessage(message){
-
+    let indexCalls = []
     return new Promise((resolve, reject) => {
       if(this.getState() == "awaitingblockchain"){
         if(message.action !== 'blocks'){
@@ -439,70 +495,98 @@ class Peer {
           this.setState("running")
           this.repository.deleteCollection("blocks")
           .then(() => {
-            this.repository.createCollection("blocks")
-                   .then(() => {
-                      const dataArr = JSON.parse(message.data)
-                     
-                      let latestBlockIndex = -1
-                      let latestBlockid = null
+            return this.repository.deleteCollection("consignmentindex")
+          })
+          .then(() => {
+            return this.repository.createCollection("blocks")
+          })
+          .then(()=> {
+            return this.repository.createCollection("consignmentindex")
+          }) 
+          .then(() => {
+              const dataArr = JSON.parse(message.data)
+             
+              let latestBlockIndex = -1
+              let latestBlockid = null
 
-                      const promises = dataArr.map(blockStr => {
-                        try{
-                          const block = Block.deserialize(blockStr)
-                          if(block.index > latestBlockIndex){
-                            latestBlockIndex = block.index
-                            latestBlockid = block.id
-                          }
+             // let consignmentids = []
 
-                          if(block.transactions.length > 0){
+             
 
-                            const transToDelete = JSON.parse(block.transactions) //deserialise the transactions
-                            
-                            const transactionIds = transToDelete.map(t => {
-                             
-                              return JSON.parse(t).id
-                            })
+              const addBlockPromises = dataArr.map(blockStr => {
+                try{
+                  const block = Block.deserialize(blockStr)
+                  if(block.index > latestBlockIndex){
+                    latestBlockIndex = block.index
+                    latestBlockid = block.id
+                  }
+
+                  if(block.transactions.length > 0){
+
+                    const transToDelete = JSON.parse(block.transactions) //deserialise the transactions
+                    
+                    const transactionIds = transToDelete.map(t => {
+                      indexCalls.push({'block':block,'consignmentid': JSON.parse(t).consignmentid}) 
+                  
+                      //consignmentids.push(t.consignmentid)
+                      return JSON.parse(t).id
+                    })
+
+        
+                    this.removeTransactions(transactionIds) //remove any of this block transactions from the transaction pool
+                  }
+                  //index the block
+
+
+                  return(this.repository.addBlock(block)) //add directly to the repository - they could be in any order
+
+                }catch(error){
+                  logger.error(error)
+                  return Promise.reject(error)
+                }
+                
+              })
+             
+            
+              
+
+                this.blockchain.setLatestBlockId(latestBlockid)
+                this.blockchain.setLatestBlockIndex(latestBlockIndex)
+                this.blockchain.setLength(addBlockPromises.length)
+                this.blockchain.setHash(Blockchain.createHash(this.blockchain))
 
                 
-                            this.removeTransactions(transactionIds) //remove any of this block transactions from the transaction pool
-                          }
-                          return(this.repository.addBlock(block)) //add directly to the repository - they could be in any order
-
-                        }catch(error){
-                          logger.error(error)
-                          return Promise.reject(error)
-                        }
-                        
-                      })
-
-                      this.blockchain.setLatestBlockId(latestBlockid)
-                      this.blockchain.setLatestBlockIndex(latestBlockIndex)
-                      this.blockchain.setLength(promises.length)
-                      this.blockchain.setHash(Blockchain.createHash(this.blockchain))
-
-                     
-                      Promise.all(promises)
+                
+                  Promise.all(addBlockPromises)
+                  .then(() => {
+                    this.repository.addBlockchain(this.blockchain)
+                    .then(() => {
+                       this.syncIndexBlocks(indexCalls)
                       .then(() => {
-                        this.repository.addBlockchain(this.blockchain)
-                        .then(() => {
-                          resolve(true)
-                        })
-                        .catch(error => {
-                          logger.error(error)
-                          resolve(false)
-                        })
+                        resolve(true)
                       })
-                      .catch(error => {
-                        logger.error(error)
-                        resolve(false)
-                      })
-                      
-                   })
-                   .catch(error => {
+                    })
+                    .catch(error => {
+                      logger.error(error)
+                      resolve(false)
+                    })
+                  })
+                  .catch(error => {
                     logger.error(error)
                     resolve(false)
-                   })
-          })
+                  })
+              
+              
+              
+             
+              
+              
+           })
+           .catch(error => {
+            logger.error(error)
+            resolve(false)
+           })
+
         }
  
         
@@ -601,6 +685,16 @@ class Peer {
     })
   }
 
+  async syncIndexBlocks(indexCalls){    //synchronously index the blocks
+
+    for(let i=0 ;i< indexCalls.length;i++){
+         let ic = indexCalls[i]
+         let r = await this.indexBlock(ic.block,ic.consignmentid)
+         
+    }
+
+  }
+
   broadcastMessage(action, data){
     Object.keys(this.connectedPeers).forEach((peer) => {
       if(peer !== (this.discoveryServerUrl + ":" + this.discoveryServerMessagePort)) //don't send to discovery Server
@@ -684,7 +778,7 @@ class Peer {
     this.setState("mining")
 
     const countdown = minimumtimeout + Math.floor(Math.random() * timeout)
-     console.log("startMiningCountdownProcess " + countdown)
+    // console.log("startMiningCountdownProcess " + countdown)
 
     this.miningCountdownProcess = fork(nconf.get("miningcountdownprocesspath"),['' + countdown])
 
@@ -692,7 +786,7 @@ class Peer {
   }
 
   miningCountdownSuccessCallback(code){
-    console.log("miningCountdownSuccessCallback")
+   // console.log("miningCountdownSuccessCallback")
     return new Promise((resolve,reject) => {
       //console.log(`child exited with code ${code}`)
       if(code == 100){ //success
@@ -713,7 +807,7 @@ class Peer {
       if(code == 200){ //failure - has been pre-empted
         this.setState("running")
         this.miningCountdownProcess = null
-        logger.info("miningCountdownSuccessCallback pre-empted")
+        //logger.info("miningCountdownSuccessCallback pre-empted")
         resolve(true)
       }
 

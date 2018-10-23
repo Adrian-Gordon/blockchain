@@ -4,7 +4,7 @@
   "description": "",
   "main": "peer.js",
   "scripts": {
-    "test": "mocha -R spec --reporter-options toConsole=true   *.spec.js --conf=testconfig.json"
+    "test": "mocha -R spec --reporter-options toConsole=true  *.spec.js --conf=testconfig.json"
   },
   "author": "",
   "license": "ISC",

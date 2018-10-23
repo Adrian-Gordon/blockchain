@@ -115,7 +115,7 @@ describe("Repository", () => {
     })
 
     it("retrieves a transaction from a leveldb database", (done) => {
-      const transaction = new Transaction({'consignmentid':'cabcdefg','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey})
+      const transaction = new Transaction({'consignmentid':'cabcdefgh','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey})
       const transactionid = transaction.id
 
       repo.addTransaction(transaction).then((result)=> {
@@ -139,7 +139,7 @@ describe("Repository", () => {
     
 
     it("deletes a transaction from a leveldb database", (done) => {
-      const transaction = new Transaction({'consignmentid':'cabcdefg','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey})
+      const transaction = new Transaction({'consignmentid':'cabcdefi','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey})
       const transactionid = transaction.id
 
       repo.addTransaction(transaction).then((result)=> {
@@ -155,7 +155,7 @@ describe("Repository", () => {
     })
 
     it("fails to add an invalid transaction to a leveldb database", (done) => {
-      const transaction = new Transaction({'consignmentid':'cabcdefg','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey})
+      const transaction = new Transaction({'consignmentid':'cabcdefj','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey})
       const transactionid = transaction.id
       transaction.consignmentid = 't1234568' //change some of the data
       repo.addTransaction(transaction).then((result) => {
@@ -171,12 +171,12 @@ describe("Repository", () => {
 
     it("retrieves all transactions from the repository", (done) => {
 
-      const transactions = [
+      const transactions = [ // plus two existing ones
         
       ]
-      transactions.push(new Transaction({'consignmentid':'cabcdefg','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
-      transactions.push(new Transaction({'consignmentid':'cabcdefh','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
-      transactions.push(new Transaction({'consignmentid':'cabcdefi','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+      transactions.push(new Transaction({'consignmentid':'cabcdefk','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+      transactions.push(new Transaction({'consignmentid':'cabcdefl','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+      transactions.push(new Transaction({'consignmentid':'cabcdefm','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
       const promises = transactions.map(repo.addTransaction.bind(repo))
 
      
@@ -184,7 +184,7 @@ describe("Repository", () => {
       Promise.all(promises).then((results) =>{
         
         repo.getAllTransactions().then(transactionsReturned => {
-           expect(transactionsReturned.length).to.eql(3)
+           expect(transactionsReturned.length).to.eql(5)
            expect(transactionsReturned[0]).to.be.instanceof(Transaction)
            done()
         })
@@ -474,4 +474,64 @@ describe("blockchain", () => {
 
       })
     })
+
+    
   })
+
+describe("consignment index", () => {
+
+  const repo = new Repository(Levelupdb)
+
+    before(() => {
+       return new Promise(resolve => {
+          repo.createCollection('consignmentindex').then(() => {
+            resolve()
+          })
+       })
+      
+    })
+    after(() => {
+        return new Promise(resolve => {
+          Levelupdb.delete('consignmentindex').then(() => {
+            resolve()
+          })
+       })
+
+    })
+
+  it("adds a consignment index record to a leveldb database", (done) => {
+      const cir = {
+        id: 'abcdefg',
+        blockids: ['1234567', '0123456']
+      }
+
+      repo.addConsignmentIndex(cir)
+      .then(result => {
+        expect(result).to.eql('OK')
+        Levelupdb.getRecord('consignmentindex',"abcdefg").then(data => {
+          data.id.should.eql("abcdefg")
+          expect(data.blockids).to.include.members(['1234567', '0123456'])
+          done()
+        })
+      })
+
+    })
+
+  it("gets a consignment index record", (done) => {
+
+    repo.getConsignmentIndex('abcdefg')
+    .then((record) => {
+      expect(record.id).to.eql('abcdefg')
+      expect(record.blockids).to.include.members(['1234567', '0123456'])
+      done()
+    })
+  })
+
+  it("rejects  when getting a non-existant consignment index record", (done) => {
+
+    repo.getConsignmentIndex('abcdefh')
+    .catch((error) => {
+      done()
+    })
+  })
+})

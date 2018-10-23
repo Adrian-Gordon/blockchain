@@ -76,6 +76,56 @@ const startServer = (peer, port) => {
         res.status(status.BAD_REQUEST).send(error)
       })
     })
+     expressApp.get('/blockchain',(req, res, next) => {
+      expressApp.peer.repository.getBlockchain('blockchain')
+      .then(blockchain => {
+        res.status(status.OK).send(blockchain)
+      })
+      .catch(error => {
+        res.status(status.BAD_REQUEST).send(error)
+      })
+    })
+     expressApp.get('/consignments/:consignmentid',(req, res, next) => {
+      const consignmentid = req.params.consignmentid
+      expressApp.peer.repository.getConsignmentIndex(consignmentid)
+      .then(index => {
+        const blockids = index.blockids
+        const blockPromises = blockids.map(bid => {
+          return peer.repository.getBlock(bid)
+        })
+        Promise.all(blockPromises)
+        .then(blocks => {
+          let allGoodTransactions = []
+          blocks.forEach(block =>{
+            
+            const transactions = JSON.parse(block.transactions)
+
+            const goodTransactions = transactions.filter(t => {
+              //console.log("t: " + t)
+              const t1 = JSON.parse(t)
+             
+              if(t1.consignmentid == consignmentid) return true
+              return false
+            })
+           
+            allGoodTransactions = allGoodTransactions.concat(goodTransactions)
+            
+          })
+
+          res.status(status.OK).send(allGoodTransactions.map(t => JSON.parse(t)))
+        })
+        .catch(error => {
+          console.log(error)
+          res.status(status.BAD_REQUEST).send(error)
+        })
+        
+      })
+      .catch(error => {
+        console.log(error)
+        res.status(status.BAD_REQUEST).send(error)
+      })
+
+     })
 
 
 

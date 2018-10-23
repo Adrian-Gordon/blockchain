@@ -146,12 +146,15 @@ describe('Peer Instantiation', () => {
        Levelupdb.collections.should.have.property('transactionpool')
        Levelupdb.collections.should.have.property('blocks')
       Levelupdb.collections.should.have.property('blockchain')
+       Levelupdb.collections.should.have.property('consignmentindex')
        Levelupdb.delete('transactionpool')
        .then(()=> {
        Levelupdb.delete('blocks')
         .then(() => {
            Levelupdb.delete('blockchain').then(() => {
-            done()
+             Levelupdb.delete('consignmentindex').then(() => {
+              done()
+             })
            })
         })
 
@@ -171,6 +174,7 @@ describe('Peer Instantiation', () => {
             Levelupdb.collections.should.not.have.property('transactionpool')
             Levelupdb.collections.should.not.have.property('blocks')
             Levelupdb.collections.should.not.have.property('blockchain')
+            Levelupdb.collections.should.not.have.property('consignmentindex')
             done()
           })
     })
@@ -845,6 +849,69 @@ describe("Peer transaction processing", () => {
 
 })
 
+describe("Peer block indexing", () => {
+  let peer = null
+  before((done) => {
+     peer = new Peer("127.0.0.1",3000, 3001, 3002, new Repository(Levelupdb))
+     peer.createCollections().then(() => {
+      done()
+
+      
+     })
+
+  })
+
+  after((done) => {
+    peer.deleteCollections().then(() => {done()})
+
+  })
+
+  it("should create a new index entry", (done) => {
+
+    peer.indexBlock({id:"Babcdefg"},"Cabcdefg")
+    .then(()=> {
+      peer.repository.getConsignmentIndex("Cabcdefg")
+      .then((res) => {
+         expect(res.blockids).to.include("Babcdefg")
+         expect(res.blockids.length).to.eql(1)
+         done()
+      })
+    })
+
+
+  })
+   it("should add to an existing index entry", (done) => {
+
+    peer.indexBlock({id:"Babcdefh"},"Cabcdefg")
+    .then(()=> {
+      peer.repository.getConsignmentIndex("Cabcdefg")
+      .then((res) => {
+       
+         expect(res.blockids).to.include.members(["Babcdefg","Babcdefh"])
+         expect(res.blockids.length).to.eql(2)
+         done()
+      })
+    })
+
+
+  })
+   it("should not add to an existing index entry if the blockid is already indexed", (done) => {
+
+    peer.indexBlock({id:"Babcdefh"},"Cabcdefg")
+    .then(()=> {
+      peer.repository.getConsignmentIndex("Cabcdefg")
+      .then((res) => {
+        
+         expect(res.blockids).to.include.members(["Babcdefg","Babcdefh"])
+         expect(res.blockids.length).to.eql(2)
+         done()
+      })
+    })
+
+
+  })
+})
+
 describe("Peer block processing", () => {
   let peer = null
   beforeEach((done) => {
@@ -963,14 +1030,14 @@ describe("Peer block processing", () => {
 
   
   })
-  it("should add a new block to the database, update the blockchain object, and remove the block's transactions from the transactionsPool", (done) => {
+  it("should add a new block to the database, update the blockchain object, remove the block's transactions from the transactionsPool, and index the transactions by consignmentid", (done) => {
     
       const transactions1 = [
         
       ]
       transactions1.push(new Transaction({'consignmentid':'cabcdefg','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
       transactions1.push(new Transaction({'consignmentid':'cabcdefh','data':{"somemore":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
-      transactions1.push(new Transaction({'consignmentid':'cabcdefi','data':{"yetmore":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+      transactions1.push(new Transaction({'consignmentid':'cabcdefg','data':{"yetmore":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
       
       const remainingTransaction = new Transaction({'consignmentid':'cabcdefj','data':{"stillyetmore":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey})      //add transactions to the transactionPool
 
@@ -1003,7 +1070,19 @@ describe("Peer block processing", () => {
               peer.repository.getAllTransactions()
               .then(transactions => {
                 expect(transactions.length).to.eql(1) //remaining transaction 
-                done()
+                //block should hve been indexed
+                peer.repository.getConsignmentIndex("cabcdefg")
+                .then(consignmentIndex => {
+                  consignmentIndex.blockids
+                  expect(consignmentIndex.blockids).to.include(blk.id)
+                  peer.repository.getConsignmentIndex("cabcdefh")
+                  .then(consignmentIndex => {
+                    consignmentIndex.blockids
+                    expect(consignmentIndex.blockids).to.include(blk.id)
+                    done()
+                  })
+                })
+                
               })
               
             })
@@ -1740,21 +1819,21 @@ describe("Input Message Processing", () => {
              })
              .then(() => {
 
-              const transactions3 =[]
+              const transactions4 =[]
 
               //create a replacement blockchain structure
-              transactions3.push(new Transaction({'consignmentid':'cabcdefg1','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
-              transactions3.push(new Transaction({'consignmentid':'cabcdefh2','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
-              transactions3.push(new Transaction({'consignmentid':'cabcdefi3','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+              transactions4.push(new Transaction({'consignmentid':'cabcdefg1','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+              transactions4.push(new Transaction({'consignmentid':'cabcdefh2','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+              transactions4.push(new Transaction({'consignmentid':'cabcdefi3','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
               
-              const block4 = new Block({"previousHash":originBlock.id,"transactions":transactions3, "index":1})
+              const block4 = new Block({"previousHash":originBlock.id,"transactions":transactions4, "index":1})
 
-              const transactions4 = []
-              transactions4.push(new Transaction({'consignmentid':'cabcdefg4','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
-              transactions4.push(new Transaction({'consignmentid':'cabcdefh5','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
-              transactions4.push(new Transaction({'consignmentid':'cabcdefi6','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+              const transactions5 = []
+              transactions5.push(new Transaction({'consignmentid':'cabcdefg1','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+              transactions5.push(new Transaction({'consignmentid':'cabcdefh5','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+              transactions5.push(new Transaction({'consignmentid':'cabcdefi6','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
               
-              const block5 = new Block({"previousHash":block4.id,"transactions":transactions4, "index":2})
+              const block5 = new Block({"previousHash":block4.id,"transactions":transactions5, "index":2})
 
               const blocksArray = [originBlock, block4, block5]
 
@@ -1789,10 +1868,17 @@ describe("Input Message Processing", () => {
                         peer.repository.getAllBlocks()
                         .then(blocks => {
                           expect(blocks.length).to.eql(3) //and no more
-                          peer.deleteCollections()
-                          .then(() => {
-                            done()
-                          })
+
+                          //check that the new blockchain has been indexed correctly
+                            peer.repository.getConsignmentIndex("cabcdefg1")
+                            .then((res) => {
+                              expect(res.blockids.length).to.eql(2)
+                              peer.deleteCollections()
+                              .then(() => {
+                                done()
+                              })
+                            })
+ 
 
                         })
 
@@ -2320,18 +2406,18 @@ describe("webserver", () => {
           const transactions2 = [
             
           ]
+          transactions2.push(new Transaction({'consignmentid':'cabcdefj','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
           transactions2.push(new Transaction({'consignmentid':'cabcdefg','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
-          transactions2.push(new Transaction({'consignmentid':'cabcdefh','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
-          transactions2.push(new Transaction({'consignmentid':'cabcdefi','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+          transactions2.push(new Transaction({'consignmentid':'cabcdefl','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
           
           const block2 = new Block({"previousHash":block1.id,"transactions":transactions2, "index": 2})
 
           const transactions3 = [
             
           ]
+          transactions3.push(new Transaction({'consignmentid':'cabcdefm','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+          transactions3.push(new Transaction({'consignmentid':'cabcdefn','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
           transactions3.push(new Transaction({'consignmentid':'cabcdefg','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
-          transactions3.push(new Transaction({'consignmentid':'cabcdefh','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
-          transactions3.push(new Transaction({'consignmentid':'cabcdefi','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
           
           const block3 = new Block({"previousHash":block2.id,"transactions":transactions3,"index": 3})
 
@@ -2369,5 +2455,135 @@ describe("webserver", () => {
 
   })
 
+  it("returns a blockchain", (done) => {
+     const peer = new Peer("127.0.0.1",3000, 3001,3002, new Repository(Levelupdb))
+     peer.deleteCollections()
+     .then(() => {
+
+
+     const blockchain = new Blockchain({"length": 10, "latestblockid": "abcdef","latestblockindex":10})
+      peer.createCollections()
+      .then(() => {
+        peer.setBlockchain(blockchain)
+        .then((blockchain) => {
+          peer.startWebServer(3003).then(() => {
+              request(peer.webServer)
+              .get('/blockchain')
+              .send()
+              .set('Content-Type','application/json')
+              .set('Accept','aplication/json')
+              .expect(200)
+              .then(res => {
+                expect(res.body.id).to.eql('blockchain')
+                peer.deleteCollections().then(() => {
+                     peer.webServer.close()
+                    done()
+                  })
+              })
+              
+
+            })
+         })
+       })
+
+
+    })
+
+  })
+
+  it("returns a consignment", (done) => {
+     const peer = new Peer("127.0.0.1",3000, 3001,3002, new Repository(Levelupdb))
+     peer.deleteCollections()
+     .then(() => {
+
+       peer.createCollections().then(() => {
+
+          //add an origin block
+        const originBlock = new Block({"previousHash": "-1", "transactions":[],"index":0})
+        //save to the database
+        peer.repository.addBlock(originBlock).then(result => {
+          //set up the blockchain object
+          const blockchain = new Blockchain({"latestblockid": originBlock.id, "latestblockindex": originBlock.index, "length":1})
+          peer.setBlockchain(blockchain)
+          .then(() => {
+              const transactions1 = [
+        
+              ]
+              transactions1.push(new Transaction({'consignmentid':'cabcdefg','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+              transactions1.push(new Transaction({'consignmentid':'cabcdefh','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+              transactions1.push(new Transaction({'consignmentid':'cabcdefi','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+              
+              const block1 = new Block({"previousHash":originBlock.id,"transactions":transactions1,"index":1})
+
+              const transactions2 = [
+                
+              ]
+              transactions2.push(new Transaction({'consignmentid':'cabcdefj','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+              transactions2.push(new Transaction({'consignmentid':'cabcdefg','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+              transactions2.push(new Transaction({'consignmentid':'cabcdefl','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+              
+              const block2 = new Block({"previousHash":block1.id,"transactions":transactions2, "index": 2})
+
+              const transactions3 = [
+                
+              ]
+              transactions3.push(new Transaction({'consignmentid':'cabcdefm','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+              transactions3.push(new Transaction({'consignmentid':'cabcdefg','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+              transactions3.push(new Transaction({'consignmentid':'cabcdefg','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+              
+              const block3 = new Block({"previousHash":block2.id,"transactions":transactions3,"index": 3})
+
+            //  const blocks = [block1, block2, block3]
+
+           //   const promises = blocks.map(block => {
+            //    peer.addBlock(block)
+           //   })
+
+           //   Promise.all(promises).then(()=> {
+              peer.addBlock(block1)
+              .then(() => {
+                return peer.addBlock(block2)
+              })
+              .then(()=> {
+                return peer.addBlock(block3)
+              })
+              .then(() => {   
+                    peer.startWebServer(3003).then(() => {
+                      request(peer.webServer)
+                      .get('/consignments/cabcdefg')
+                      .send()
+                      .set('Content-Type','application/json')
+                      .set('Accept','aplication/json')
+                      .expect(200)
+                      .then(res => {
+                        
+                        expect(res.body.length).to.eql(4)
+                        peer.deleteCollections().then(() => {
+                             peer.webServer.close()
+                            done()
+                          })
+                      })
+                    
+
+                    })
+
+
+              })
+                
+                
+
+              })
+             
+          })
+         
+        })
+
+        
+
+       
+     })
+    
+
+  })
 })
 

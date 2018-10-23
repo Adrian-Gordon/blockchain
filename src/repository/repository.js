@@ -156,6 +156,41 @@ class Repository{
    return this.db.deleteRecord('blockchain',blockchainid)
   }
 
+  getConsignmentIndex(consignmentid){
+    
+    return new Promise((resolve, reject) => {
+      this.db.getRecord('consignmentindex',consignmentid)
+      .then((record) => {
+       
+        resolve(record)
+      })
+      .catch(error => {
+        
+        reject(error)
+      })
+
+    })
+   
+  }
+
+  getAllConsignmentIndexes(){
+    return new Promise((resolve, reject) => {
+      this.db.getAllRecords('consignmentindex')
+      .then(indexes => {
+        resolve(indexes)
+      })
+      .catch(error => {
+        reject(error)
+      })
+
+    })
+  }
+
+  addConsignmentIndex(consignmentIndexRecord){
+
+    return this.db.saveRecord('consignmentindex', consignmentIndexRecord.id,consignmentIndexRecord)
+  }
+
 
 
 }
