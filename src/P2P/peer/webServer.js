@@ -60,7 +60,11 @@ const startServer = (peer, port) => {
     expressApp.get('/transactions',(req, res, next) => {
       expressApp.peer.repository.getAllTransactions()
       .then(transactions => {
-        res.status(status.OK).send(transactions)
+        expressApp.peer.getRepositoryTransactionPoolSize()
+        .then(size2 => {
+          res.status(status.OK).send({"size": expressApp.peer.getTransactionPoolSize(),"reposize":size2,"threshold":expressApp.peer.getTransactionPoolThreshold(),"transactions":transactions})
+        })
+        
       })
       .catch(error => {
         res.status(status.BAD_REQUEST).send(error)

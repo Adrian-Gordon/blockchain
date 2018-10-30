@@ -1,18 +1,18 @@
 {
   "hashalgorithm":"SHA256",
   "signatureformat":"hex",
-  "privatekeyurl":"./private.pem",
-  "publickeyurl":"./public.pem",
-  "dbpath":"./data/",
+  "privatekeyurl":"peer2/private.pem",
+  "publickeyurl":"peer2/public.pem",
+  "dbpath":"peer2/data/",
   "defaulttpthreshold": 5000,
   "defaultminingcountdown":10000,
   "minimumminingcountdown":1000,
-   "miningcountdownprocesspath":"../../P2P/peer/miningCountdownProcess.js",
+  "miningcountdownprocesspath":"../src/P2P/peer/miningCountdownProcess.js",
   "discoveryserverurl":"127.0.0.1",
   "discoveryserverport":3000,
   "discoveryservermessageport":3001,
   "port":3004,
   "webserverport":3005,
-   "listentime":100,
+  "listentime":100,
   "monitortransactiontime": 500
 }

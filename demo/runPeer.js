@@ -1,16 +1,16 @@
 'use strict'
 
-const nconf = require('../config/conf.js').nconf
+const nconf = require('../src/config/conf.js').nconf
 
-const Repository = require('../repository/repository').Repository
+const Repository = require('../src/repository/repository').Repository
 
-const Levelupdb = require('../database/leveldb/levelup').Levelupdb
+const Levelupdb = require('../src/database/leveldb/levelup').Levelupdb
 
-const Block = require('../block/block').Block
+const Block = require('../src/block/block').Block
 
-const Blockchain = require('../blockchain/blockchain').Blockchain
+const Blockchain = require('../src/blockchain/blockchain').Blockchain
 
-const Peer = require('../P2P/peer/peer').Peer
+const Peer = require('../src/P2P/peer/peer').Peer
 
 const peer = new Peer(nconf.get("discoveryserverurl"), nconf.get("discoveryserverport"), nconf.get("discoveryservermessageport"),nconf.get("port"), new Repository(Levelupdb))
 
@@ -41,7 +41,7 @@ peer.deleteCollections()
 })
 .then(() => {
   peer.startWebServer(nconf.get("webserverport")).then(() => {
-    peer.listen(nconf.get("listentime"))
+    peer.listen(nconf.get('listentime'))
     peer.monitorTransactionPool(nconf.get("monitortransactiontime"))
   })
   

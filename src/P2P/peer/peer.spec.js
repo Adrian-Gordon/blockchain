@@ -713,7 +713,7 @@ describe("Peer transaction processing", () => {
 
   it("should throw an error when asked to add an invalid transaction", (done) => {
 
-    const transaction = new Transaction({'consignmentid':'cabcdefi','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey})
+    const transaction = new Transaction({'consignmentid':'cabcdefi','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey})
 
       transaction.consignmentid = "cabcdefj" //invalidate it
       peer.addTransaction(transaction).catch(error => {
@@ -724,7 +724,7 @@ describe("Peer transaction processing", () => {
 
   it("should add a new transaction", (done) => {
 
-    const transaction = new Transaction({'consignmentid':'cabcdefi','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey})
+    const transaction = new Transaction({'consignmentid':'cabcdefi','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey})
 
     const originalTransactionPoolSize = peer.getTransactionPoolSize()
     const transactionSize = transaction.getSize()
@@ -747,9 +747,9 @@ describe("Peer transaction processing", () => {
 
   it("should return the total size of the repository transaction pool", (done) => {
 
-    const transaction1 = new Transaction({'consignmentid':'cabcdefi','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey})
-    const transaction2 = new Transaction({'consignmentid':'cabcdefi','data':{"somemore":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey})
-    const transaction3 = new Transaction({'consignmentid':'cabcdefi','data':{"evenmore":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey})
+    const transaction1 = new Transaction({'consignmentid':'cabcdefi','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey})
+    const transaction2 = new Transaction({'consignmentid':'cabcdefi','transactiontype':'despatched','data':{"somemore":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey})
+    const transaction3 = new Transaction({'consignmentid':'cabcdefi','transactiontype':'despatched','data':{"evenmore":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey})
   
     const promises = [peer.addTransaction(transaction1),peer.addTransaction(transaction2),peer.addTransaction(transaction3)]
      
@@ -769,9 +769,9 @@ describe("Peer transaction processing", () => {
 
   it("should remove transactions", (done) => {
 
-    const transaction1 = new Transaction({'consignmentid':'cabcdefi','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey})
-    const transaction2 = new Transaction({'consignmentid':'cabcdefi','data':{"somemore":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey})
-    const transaction3 = new Transaction({'consignmentid':'cabcdefi','data':{"evenmore":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey})
+    const transaction1 = new Transaction({'consignmentid':'cabcdefi','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey})
+    const transaction2 = new Transaction({'consignmentid':'cabcdefi','transactiontype':'despatched','data':{"somemore":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey})
+    const transaction3 = new Transaction({'consignmentid':'cabcdefi','transactiontype':'despatched','data':{"evenmore":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey})
   
     const promises = [peer.addTransaction(transaction1),peer.addTransaction(transaction2),peer.addTransaction(transaction3)]
      
@@ -802,9 +802,9 @@ describe("Peer transaction processing", () => {
 
    it("should gather transactions", (done) => {
 
-    const transaction1 = new Transaction({'consignmentid':'cabcdefi','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey})
-    const transaction2 = new Transaction({'consignmentid':'cabcdefi','data':{"somemore":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey})
-    const transaction3 = new Transaction({'consignmentid':'cabcdefi','data':{"evenmore":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey})
+    const transaction1 = new Transaction({'consignmentid':'cabcdefi','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey})
+    const transaction2 = new Transaction({'consignmentid':'cabcdefi','transactiontype':'despatched','data':{"somemore":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey})
+    const transaction3 = new Transaction({'consignmentid':'cabcdefi','transactiontype':'despatched','data':{"evenmore":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey})
   
     const promises = [peer.addTransaction(transaction1),peer.addTransaction(transaction2),peer.addTransaction(transaction3)]
      
@@ -828,20 +828,25 @@ describe("Peer transaction processing", () => {
       return(true)
     })
     peer.setTransactionPoolThreshold(4000)
+    peer.monitorTransactionPool(10)
 
-    const transaction1 = new Transaction({'consignmentid':'cabcdefi','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey})
-    const transaction2 = new Transaction({'consignmentid':'cabcdefi','data':{"somemore":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey})
-    const transaction3 = new Transaction({'consignmentid':'cabcdefi','data':{"evenmore":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey})
+    const transaction1 = new Transaction({'consignmentid':'cabcdefi','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey})
+    const transaction2 = new Transaction({'consignmentid':'cabcdefi','transactiontype':'despatched','data':{"somemore":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey})
+    const transaction3 = new Transaction({'consignmentid':'cabcdefi','transactiontype':'despatched','data':{"evenmore":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey})
   
     const promises = [peer.addTransaction(transaction1),peer.addTransaction(transaction2),peer.addTransaction(transaction3)]
      
      Promise.all(promises)
      .then(() => {
-      const transaction4 = new Transaction({'consignmentid':'cabcdefi','data':{"yetmore":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey})
+      const transaction4 = new Transaction({'consignmentid':'cabcdefi','transactiontype':'despatched','data':{"yetmore":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey})
       peer.addTransaction(transaction4)
       .then(() => {
-         expect(peerSpy.calledWith(nconf.get("minimumminingcountdown"),nconf.get("defaultminingcountdown"))).to.be.true
-        done()
+          setTimeout(()=> {   //wait for the mintoring task to cath up
+            expect(peerSpy.calledWith(nconf.get("minimumminingcountdown"),nconf.get("defaultminingcountdown"))).to.be.true
+            peer.stopMonitoringTransactions()
+            done()
+          }, 100)
+         
       })
 
      })
@@ -957,9 +962,9 @@ describe("Peer block processing", () => {
       const transactions1 = [
         
       ]
-      transactions1.push(new Transaction({'consignmentid':'cabcdefg','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
-      transactions1.push(new Transaction({'consignmentid':'cabcdefh','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
-      transactions1.push(new Transaction({'consignmentid':'cabcdefi','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+      transactions1.push(new Transaction({'consignmentid':'cabcdefg','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+      transactions1.push(new Transaction({'consignmentid':'cabcdefh','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+      transactions1.push(new Transaction({'consignmentid':'cabcdefi','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
       
       const block1 = new Block({"previousHash":peer.blockchain.getLatestBlockId(),"transactions":transactions1, "index":1})
 
@@ -977,9 +982,9 @@ describe("Peer block processing", () => {
       const transactions1 = [
         
       ]
-      transactions1.push(new Transaction({'consignmentid':'cabcdefg','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
-      transactions1.push(new Transaction({'consignmentid':'cabcdefh','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
-      transactions1.push(new Transaction({'consignmentid':'cabcdefi','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+      transactions1.push(new Transaction({'consignmentid':'cabcdefg','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+      transactions1.push(new Transaction({'consignmentid':'cabcdefh','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+      transactions1.push(new Transaction({'consignmentid':'cabcdefi','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
       
       const block1 = new Block({"previousHash":peer.blockchain.getLatestBlockId(),"transactions":transactions1, "index":-1})
 
@@ -997,9 +1002,9 @@ describe("Peer block processing", () => {
       const transactions1 = [
         
       ]
-      transactions1.push(new Transaction({'consignmentid':'cabcdefg','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
-      transactions1.push(new Transaction({'consignmentid':'cabcdefh','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
-      transactions1.push(new Transaction({'consignmentid':'cabcdefi','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+      transactions1.push(new Transaction({'consignmentid':'cabcdefg','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+      transactions1.push(new Transaction({'consignmentid':'cabcdefh','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+      transactions1.push(new Transaction({'consignmentid':'cabcdefi','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
       
       const block1 = new Block({"previousHash":"abcde","transactions":transactions1, "index":1})
 
@@ -1016,9 +1021,9 @@ describe("Peer block processing", () => {
       const transactions1 = [
         
       ]
-      transactions1.push(new Transaction({'consignmentid':'cabcdefg','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
-      transactions1.push(new Transaction({'consignmentid':'cabcdefh','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
-      transactions1.push(new Transaction({'consignmentid':'cabcdefi','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+      transactions1.push(new Transaction({'consignmentid':'cabcdefg','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+      transactions1.push(new Transaction({'consignmentid':'cabcdefh','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+      transactions1.push(new Transaction({'consignmentid':'cabcdefi','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
       
       const block1 = new Block({"previousHash":peer.blockchain.getLatestBlockId(),"transactions":transactions1, "index":2})
 
@@ -1035,11 +1040,11 @@ describe("Peer block processing", () => {
       const transactions1 = [
         
       ]
-      transactions1.push(new Transaction({'consignmentid':'cabcdefg','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
-      transactions1.push(new Transaction({'consignmentid':'cabcdefh','data':{"somemore":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
-      transactions1.push(new Transaction({'consignmentid':'cabcdefg','data':{"yetmore":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+      transactions1.push(new Transaction({'consignmentid':'cabcdefg','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+      transactions1.push(new Transaction({'consignmentid':'cabcdefh','transactiontype':'despatched','data':{"somemore":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+      transactions1.push(new Transaction({'consignmentid':'cabcdefg','transactiontype':'despatched','data':{"yetmore":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
       
-      const remainingTransaction = new Transaction({'consignmentid':'cabcdefj','data':{"stillyetmore":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey})      //add transactions to the transactionPool
+      const remainingTransaction = new Transaction({'consignmentid':'cabcdefj','transactiontype':'despatched','data':{"stillyetmore":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey})      //add transactions to the transactionPool
 
       const promises = transactions1.map((trans) => {
         return peer.addTransaction(trans)
@@ -1047,14 +1052,21 @@ describe("Peer block processing", () => {
 
       Promise.all(promises)
       .then(() => {
-        return peer.addTransaction(remainingTransaction)
-
+         
+         return peer.getRepositoryTransactionPoolSize()
+         
+      })
+      .then((size)=> {
+          
+          return peer.addTransaction(remainingTransaction)
       })
       .then(() => {
+        
         const block1 = new Block({"previousHash":peer.blockchain.getLatestBlockId(),"transactions":transactions1, "index":1})
 
         const l = peer.blockchain.getLength()
         peer.addBlock(block1).then(result => {
+          
           expect(result).to.eql(block1)
           expect(peer.blockchain.getLatestBlockId()).to.eql(block1.id)
           expect(peer.blockchain.getLatestBlockIndex()).to.eql(block1.index)
@@ -1090,6 +1102,10 @@ describe("Peer block processing", () => {
             
           })
           
+        })
+        .catch(error => {
+          console.log("error: " + error)
+          done()
         })
 
       })
@@ -1228,27 +1244,27 @@ describe("Input Message Processing", () => {
       const transactions1 = [
         
       ]
-      transactions1.push(new Transaction({'consignmentid':'cabcdefg','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
-      transactions1.push(new Transaction({'consignmentid':'cabcdefh','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
-      transactions1.push(new Transaction({'consignmentid':'cabcdefi','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+      transactions1.push(new Transaction({'consignmentid':'cabcdefg','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+      transactions1.push(new Transaction({'consignmentid':'cabcdefh','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+      transactions1.push(new Transaction({'consignmentid':'cabcdefi','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
       
       const block1 = new Block({"previousHash":"abcdef","transactions":transactions1, "index":1})
 
       const transactions2 = [
         
       ]
-      transactions2.push(new Transaction({'consignmentid':'cabcdefg','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
-      transactions2.push(new Transaction({'consignmentid':'cabcdefh','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
-      transactions2.push(new Transaction({'consignmentid':'cabcdefi','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+      transactions2.push(new Transaction({'consignmentid':'cabcdefg','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+      transactions2.push(new Transaction({'consignmentid':'cabcdefh','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+      transactions2.push(new Transaction({'consignmentid':'cabcdefi','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
       
       const block2 = new Block({"previousHash":block1.id,"transactions":transactions2, "index":2})
 
       const transactions3 = [
         
       ]
-      transactions3.push(new Transaction({'consignmentid':'cabcdefg','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
-      transactions3.push(new Transaction({'consignmentid':'cabcdefh','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
-      transactions3.push(new Transaction({'consignmentid':'cabcdefi','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+      transactions3.push(new Transaction({'consignmentid':'cabcdefg','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+      transactions3.push(new Transaction({'consignmentid':'cabcdefh','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+      transactions3.push(new Transaction({'consignmentid':'cabcdefi','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
       
       const block3 = new Block({"previousHash":block2.id,"transactions":transactions3,"index": 3})
 
@@ -1336,9 +1352,9 @@ describe("Input Message Processing", () => {
             const transactions1 = [
             
             ]
-            transactions1.push(new Transaction({'consignmentid':'cabcdefg','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
-            transactions1.push(new Transaction({'consignmentid':'cabcdefh','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
-            transactions1.push(new Transaction({'consignmentid':'cabcdefi','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+            transactions1.push(new Transaction({'consignmentid':'cabcdefg','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+            transactions1.push(new Transaction({'consignmentid':'cabcdefh','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+            transactions1.push(new Transaction({'consignmentid':'cabcdefi','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
             
             const block1 = new Block({"previousHash":"abcdef","transactions":transactions1, "index":1})
 
@@ -1393,9 +1409,9 @@ describe("Input Message Processing", () => {
               const transactions1 = [
               
               ]
-              transactions1.push(new Transaction({'consignmentid':'cabcdefg','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
-              transactions1.push(new Transaction({'consignmentid':'cabcdefh','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
-              transactions1.push(new Transaction({'consignmentid':'cabcdefi','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+              transactions1.push(new Transaction({'consignmentid':'cabcdefg','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+              transactions1.push(new Transaction({'consignmentid':'cabcdefh','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+              transactions1.push(new Transaction({'consignmentid':'cabcdefi','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
               
               const block1 = new Block({"previousHash":"abcdef","transactions":transactions1, "index":-1})
 
@@ -1448,9 +1464,9 @@ describe("Input Message Processing", () => {
             const transactions1 = [
             
             ]
-            transactions1.push(new Transaction({'consignmentid':'cabcdefg','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
-            transactions1.push(new Transaction({'consignmentid':'cabcdefh','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
-            transactions1.push(new Transaction({'consignmentid':'cabcdefi','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+            transactions1.push(new Transaction({'consignmentid':'cabcdefg','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+            transactions1.push(new Transaction({'consignmentid':'cabcdefh','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+            transactions1.push(new Transaction({'consignmentid':'cabcdefi','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
             
             const block1 = new Block({"previousHash":"abcdef","transactions":transactions1, "index":1})
 
@@ -1504,9 +1520,9 @@ describe("Input Message Processing", () => {
               const transactions1 = [
               
               ]
-              transactions1.push(new Transaction({'consignmentid':'cabcdefg','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
-              transactions1.push(new Transaction({'consignmentid':'cabcdefh','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
-              transactions1.push(new Transaction({'consignmentid':'cabcdefi','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+              transactions1.push(new Transaction({'consignmentid':'cabcdefg','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+              transactions1.push(new Transaction({'consignmentid':'cabcdefh','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+              transactions1.push(new Transaction({'consignmentid':'cabcdefi','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
               
               const block1 = new Block({"previousHash":"abcdef","transactions":transactions1, "index":2})
 
@@ -1564,9 +1580,9 @@ describe("Input Message Processing", () => {
             const transactions1 = [
             
             ]
-            transactions1.push(new Transaction({'consignmentid':'cabcdefg','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
-            transactions1.push(new Transaction({'consignmentid':'cabcdefh','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
-            transactions1.push(new Transaction({'consignmentid':'cabcdefi','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+            transactions1.push(new Transaction({'consignmentid':'cabcdefg','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+            transactions1.push(new Transaction({'consignmentid':'cabcdefh','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+            transactions1.push(new Transaction({'consignmentid':'cabcdefi','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
             
             const block1 = new Block({"previousHash":originBlock.id,"transactions":transactions1, "index":1})
 
@@ -1640,7 +1656,7 @@ describe("Input Message Processing", () => {
     const peer = new Peer("127.0.0.1",3000, 3001, 3002, new Repository(Levelupdb))
     peer.createCollections().then(() => {
       //create a transaction
-      const transaction = new Transaction({'consignmentid':'cabcdefg','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey})
+      const transaction = new Transaction({'consignmentid':'cabcdefg','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey})
       //invalidate it
       transaction.consignmentid = 'cabcdefh'
       //serialize it
@@ -1670,7 +1686,7 @@ describe("Input Message Processing", () => {
     const peer = new Peer("127.0.0.1",3000, 3001, 3002, new Repository(Levelupdb))
     peer.createCollections().then(() => {
       //create a transaction
-      const transaction = new Transaction({'consignmentid':'cabcdefg','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey})
+      const transaction = new Transaction({'consignmentid':'cabcdefg','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey})
     
       const tid = transaction.id
       //serialize it
@@ -1707,7 +1723,7 @@ describe("Input Message Processing", () => {
     peer.setState("awaitingblockchain")
     peer.createCollections().then(() => {
       //create a transaction
-      const transaction = new Transaction({'consignmentid':'cabcdefg1000','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey})
+      const transaction = new Transaction({'consignmentid':'cabcdefg1000','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey})
     
       const tid = transaction.id
       //serialize it
@@ -1784,27 +1800,27 @@ describe("Input Message Processing", () => {
               const transactions1 = [
         
               ]
-              transactions1.push(new Transaction({'consignmentid':'cabcdefg','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
-              transactions1.push(new Transaction({'consignmentid':'cabcdefh','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
-              transactions1.push(new Transaction({'consignmentid':'cabcdefi','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+              transactions1.push(new Transaction({'consignmentid':'cabcdefg','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+              transactions1.push(new Transaction({'consignmentid':'cabcdefh','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+              transactions1.push(new Transaction({'consignmentid':'cabcdefi','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
               
               const block1 = new Block({"previousHash":peer.blockchain.getLatestBlockId(),"transactions":transactions1, "index":1})
 
               const transactions2 = [
                 
               ]
-              transactions2.push(new Transaction({'consignmentid':'cabcdefg','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
-              transactions2.push(new Transaction({'consignmentid':'cabcdefh','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
-              transactions2.push(new Transaction({'consignmentid':'cabcdefi','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+              transactions2.push(new Transaction({'consignmentid':'cabcdefg','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+              transactions2.push(new Transaction({'consignmentid':'cabcdefh','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+              transactions2.push(new Transaction({'consignmentid':'cabcdefi','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
               
               const block2 = new Block({"previousHash":block1.id,"transactions":transactions2, "index":2})
 
               const transactions3 = [
                 
               ]
-              transactions3.push(new Transaction({'consignmentid':'cabcdefg','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
-              transactions3.push(new Transaction({'consignmentid':'cabcdefh','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
-              transactions3.push(new Transaction({'consignmentid':'cabcdefi','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+              transactions3.push(new Transaction({'consignmentid':'cabcdefg','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+              transactions3.push(new Transaction({'consignmentid':'cabcdefh','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+              transactions3.push(new Transaction({'consignmentid':'cabcdefi','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
               
               const block3 = new Block({"previousHash":block2.id,"transactions":transactions3,"index": 3})
 
@@ -1822,16 +1838,16 @@ describe("Input Message Processing", () => {
               const transactions4 =[]
 
               //create a replacement blockchain structure
-              transactions4.push(new Transaction({'consignmentid':'cabcdefg1','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
-              transactions4.push(new Transaction({'consignmentid':'cabcdefh2','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
-              transactions4.push(new Transaction({'consignmentid':'cabcdefi3','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+              transactions4.push(new Transaction({'consignmentid':'cabcdefg1','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+              transactions4.push(new Transaction({'consignmentid':'cabcdefh2','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+              transactions4.push(new Transaction({'consignmentid':'cabcdefi3','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
               
               const block4 = new Block({"previousHash":originBlock.id,"transactions":transactions4, "index":1})
 
               const transactions5 = []
-              transactions5.push(new Transaction({'consignmentid':'cabcdefg1','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
-              transactions5.push(new Transaction({'consignmentid':'cabcdefh5','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
-              transactions5.push(new Transaction({'consignmentid':'cabcdefi6','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+              transactions5.push(new Transaction({'consignmentid':'cabcdefg1','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+              transactions5.push(new Transaction({'consignmentid':'cabcdefh5','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+              transactions5.push(new Transaction({'consignmentid':'cabcdefi6','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
               
               const block5 = new Block({"previousHash":block4.id,"transactions":transactions5, "index":2})
 
@@ -1920,27 +1936,27 @@ it("should return false when trying to process a 'blocks' message with an invali
               const transactions1 = [
         
               ]
-              transactions1.push(new Transaction({'consignmentid':'cabcdefg','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
-              transactions1.push(new Transaction({'consignmentid':'cabcdefh','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
-              transactions1.push(new Transaction({'consignmentid':'cabcdefi','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+              transactions1.push(new Transaction({'consignmentid':'cabcdefg','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+              transactions1.push(new Transaction({'consignmentid':'cabcdefh','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+              transactions1.push(new Transaction({'consignmentid':'cabcdefi','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
               
               const block1 = new Block({"previousHash":peer.blockchain.getLatestBlockId(),"transactions":transactions1, "index":1})
 
               const transactions2 = [
                 
               ]
-              transactions2.push(new Transaction({'consignmentid':'cabcdefg','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
-              transactions2.push(new Transaction({'consignmentid':'cabcdefh','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
-              transactions2.push(new Transaction({'consignmentid':'cabcdefi','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+              transactions2.push(new Transaction({'consignmentid':'cabcdefg','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+              transactions2.push(new Transaction({'consignmentid':'cabcdefh','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+              transactions2.push(new Transaction({'consignmentid':'cabcdefi','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
               
               const block2 = new Block({"previousHash":block1.id,"transactions":transactions2, "index":2})
 
               const transactions3 = [
                 
               ]
-              transactions3.push(new Transaction({'consignmentid':'cabcdefg','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
-              transactions3.push(new Transaction({'consignmentid':'cabcdefh','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
-              transactions3.push(new Transaction({'consignmentid':'cabcdefi','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+              transactions3.push(new Transaction({'consignmentid':'cabcdefg','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+              transactions3.push(new Transaction({'consignmentid':'cabcdefh','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+              transactions3.push(new Transaction({'consignmentid':'cabcdefi','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
               
               const block3 = new Block({"previousHash":block2.id,"transactions":transactions3,"index": 3})
 
@@ -1958,16 +1974,16 @@ it("should return false when trying to process a 'blocks' message with an invali
               const transactions3 =[]
 
               //create a replacement blockchain structure
-              transactions3.push(new Transaction({'consignmentid':'cabcdefg1','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
-              transactions3.push(new Transaction({'consignmentid':'cabcdefh2','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
-              transactions3.push(new Transaction({'consignmentid':'cabcdefi3','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+              transactions3.push(new Transaction({'consignmentid':'cabcdefg1','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+              transactions3.push(new Transaction({'consignmentid':'cabcdefh2','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+              transactions3.push(new Transaction({'consignmentid':'cabcdefi3','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
               
               const block4 = new Block({"previousHash":originBlock.id,"transactions":transactions3, "index":1})
 
               const transactions4 = []
-              transactions4.push(new Transaction({'consignmentid':'cabcdefg4','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
-              transactions4.push(new Transaction({'consignmentid':'cabcdefh5','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
-              transactions4.push(new Transaction({'consignmentid':'cabcdefi6','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+              transactions4.push(new Transaction({'consignmentid':'cabcdefg4','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+              transactions4.push(new Transaction({'consignmentid':'cabcdefh5','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+              transactions4.push(new Transaction({'consignmentid':'cabcdefi6','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
               
               const block5 = new Block({"previousHash":block4.id,"transactions":transactions4, "index":2})
 
@@ -1981,11 +1997,54 @@ it("should return false when trying to process a 'blocks' message with an invali
               peer.processReceivedMessage(message)
               .then((result) => {
                 expect(result).to.eql(false)
-                //peer.blockchain should reflect changes
-                peer.deleteCollections().then(() => {
-                  done()
-                })
 
+                 //saved blockchain record should not have changed
+                peer.repository.getBlockchain("blockchain")
+                .then(bc => {
+
+                  expect(peer.getState()).to.eql("awaitingblockchain")
+                  expect(bc.getLength()).to.eql(4)
+                  expect(bc.getLatestBlockId()).to.eql(block3.id)
+                  expect(bc.getLatestBlockIndex()).to.eql(block3.index)
+
+                  //all records present
+                  peer.repository.getBlock(originBlock.id)
+                  .then(ob => {
+                    expect(ob.id).to.eql(originBlock.id)
+                    peer.repository.getBlock(block1.id)
+                    .then(b1 => {
+                      expect(b1.id).to.eql(block1.id)
+                      peer.repository.getBlock(block2.id)
+                      .then(b2 => {
+                        expect(b2.id).to.eql(block2.id)
+                        peer.repository.getBlock(block3.id)
+                        .then(b3 => {
+                            peer.repository.getAllBlocks()
+                            .then(blocks => {
+                              expect(blocks.length).to.eql(4) //and no more
+                              //check that the new blockchain has been indexed correctly
+                                peer.repository.getConsignmentIndex("cabcdefg")
+                                .then((res) => {
+                                  expect(res.blockids.length).to.eql(3)
+                                  peer.deleteCollections()
+                                  .then(() => {
+                                    done()
+                                  })
+                                })
+     
+
+                            })
+                        })
+
+ 
+
+                      })
+                    })
+                  })
+                  
+                })
+         
+                
                 
               })
 
@@ -2027,8 +2086,8 @@ describe("mining", () => {
    
 
     //create some transactions
-    const transaction1 = new Transaction({'consignmentid':'cabcdefg','datatype':'application/json','data':{"some":"arbitrary","json":"data"},"publickey":publicKey})
-    const transaction2 = new Transaction({'consignmentid':'cabcdefg','datatype':'application/json','data':{"someother":"arbitrary","json":"data"},"publickey":publicKey})
+    const transaction1 = new Transaction({'consignmentid':'cabcdefg','transactiontype':'despatched','datatype':'application/json','data':{"some":"arbitrary","json":"data"},"publickey":publicKey})
+    const transaction2 = new Transaction({'consignmentid':'cabcdefg','transactiontype':'despatched','datatype':'application/json','data':{"someother":"arbitrary","json":"data"},"publickey":publicKey})
 
     const transactions = [transaction1, transaction2]
     //sets up a peer network
@@ -2154,9 +2213,9 @@ describe("mining", () => {
             const transactions1 = [
             
             ]
-            transactions1.push(new Transaction({'consignmentid':'cabcdefg','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
-            transactions1.push(new Transaction({'consignmentid':'cabcdefh','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
-            transactions1.push(new Transaction({'consignmentid':'cabcdefi','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+            transactions1.push(new Transaction({'consignmentid':'cabcdefg','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+            transactions1.push(new Transaction({'consignmentid':'cabcdefh','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+            transactions1.push(new Transaction({'consignmentid':'cabcdefi','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
             
             const block1 = new Block({"previousHash":originBlock.id,"transactions":transactions1, "index":1})
 
@@ -2210,9 +2269,9 @@ describe("mining", () => {
     peer.setTransactionPoolThreshold(3000)
     peer.createCollections().then(() => {
        //create some transactions
-      const transaction1 = new Transaction({'consignmentid':'cabcdefg','datatype':'application/json','data':{"some":"arbitrary","json":"data"},"publickey":publicKey})
-      const transaction2 = new Transaction({'consignmentid':'cabcdefg','datatype':'application/json','data':{"someother":"arbitrary","json":"data"},"publickey":publicKey})
-      const transaction3 = new Transaction({'consignmentid':'cabcdefg','datatype':'application/json','data':{"yetmore":"arbitrary","json":"data"},"publickey":publicKey})
+      const transaction1 = new Transaction({'consignmentid':'cabcdefg','transactiontype':'despatched','datatype':'application/json','data':{"some":"arbitrary","json":"data"},"publickey":publicKey})
+      const transaction2 = new Transaction({'consignmentid':'cabcdefg','transactiontype':'despatched','datatype':'application/json','data':{"someother":"arbitrary","json":"data"},"publickey":publicKey})
+      const transaction3 = new Transaction({'consignmentid':'cabcdefg','transactiontype':'despatched','datatype':'application/json','data':{"yetmore":"arbitrary","json":"data"},"publickey":publicKey})
 
 
       const transactions = [transaction1, transaction2, transaction3]
@@ -2286,6 +2345,7 @@ describe("webserver", () => {
           request(peer.webServer)
           .post('/transactions')
           .send({'consignmentid':'cabcdefi',
+            'transactiontype':'despatched',
             'data':{"some":"arbitrary","json":"data"},
             'datatype':'application/json'
           })
@@ -2348,9 +2408,9 @@ describe("webserver", () => {
        peer.createCollections().then(() => {
 
           //create some transactions
-          const transaction1 = new Transaction({'consignmentid':'cabcdefg','datatype':'application/json','data':{"some":"arbitrary","json":"data"},"publickey":publicKey})
-          const transaction2 = new Transaction({'consignmentid':'cabcdefg','datatype':'application/json','data':{"someother":"arbitrary","json":"data"},"publickey":publicKey})
-          const transaction3 = new Transaction({'consignmentid':'cabcdefg','datatype':'application/json','data':{"yetmore":"arbitrary","json":"data"},"publickey":publicKey})
+          const transaction1 = new Transaction({'consignmentid':'cabcdefg','transactiontype':'despatched','datatype':'application/json','data':{"some":"arbitrary","json":"data"},"publickey":publicKey})
+          const transaction2 = new Transaction({'consignmentid':'cabcdefg','transactiontype':'despatched','datatype':'application/json','data':{"someother":"arbitrary","json":"data"},"publickey":publicKey})
+          const transaction3 = new Transaction({'consignmentid':'cabcdefg','transactiontype':'despatched','datatype':'application/json','data':{"yetmore":"arbitrary","json":"data"},"publickey":publicKey})
 
 
           const transactions = [transaction1, transaction2, transaction3]
@@ -2371,8 +2431,7 @@ describe("webserver", () => {
               .set('Accept','aplication/json')
               .expect(200)
               .then(res => {
-                
-                expect(res.body.length).to.be.eql(3)
+                expect(res.body.transactions.length).to.be.eql(3)
                 peer.deleteCollections().then(() => {
                      peer.webServer.close()
                     done()
@@ -2397,27 +2456,27 @@ describe("webserver", () => {
           const transactions1 = [
         
           ]
-          transactions1.push(new Transaction({'consignmentid':'cabcdefg','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
-          transactions1.push(new Transaction({'consignmentid':'cabcdefh','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
-          transactions1.push(new Transaction({'consignmentid':'cabcdefi','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+          transactions1.push(new Transaction({'consignmentid':'cabcdefg','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+          transactions1.push(new Transaction({'consignmentid':'cabcdefh','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+          transactions1.push(new Transaction({'consignmentid':'cabcdefi','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
           
           const block1 = new Block({"previousHash":"abcdef","transactions":transactions1,"index":1})
 
           const transactions2 = [
             
           ]
-          transactions2.push(new Transaction({'consignmentid':'cabcdefj','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
-          transactions2.push(new Transaction({'consignmentid':'cabcdefg','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
-          transactions2.push(new Transaction({'consignmentid':'cabcdefl','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+          transactions2.push(new Transaction({'consignmentid':'cabcdefj','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+          transactions2.push(new Transaction({'consignmentid':'cabcdefg','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+          transactions2.push(new Transaction({'consignmentid':'cabcdefl','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
           
           const block2 = new Block({"previousHash":block1.id,"transactions":transactions2, "index": 2})
 
           const transactions3 = [
             
           ]
-          transactions3.push(new Transaction({'consignmentid':'cabcdefm','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
-          transactions3.push(new Transaction({'consignmentid':'cabcdefn','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
-          transactions3.push(new Transaction({'consignmentid':'cabcdefg','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+          transactions3.push(new Transaction({'consignmentid':'cabcdefm','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+          transactions3.push(new Transaction({'consignmentid':'cabcdefn','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+          transactions3.push(new Transaction({'consignmentid':'cabcdefg','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
           
           const block3 = new Block({"previousHash":block2.id,"transactions":transactions3,"index": 3})
 
@@ -2509,27 +2568,27 @@ describe("webserver", () => {
               const transactions1 = [
         
               ]
-              transactions1.push(new Transaction({'consignmentid':'cabcdefg','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
-              transactions1.push(new Transaction({'consignmentid':'cabcdefh','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
-              transactions1.push(new Transaction({'consignmentid':'cabcdefi','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+              transactions1.push(new Transaction({'consignmentid':'cabcdefg','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+              transactions1.push(new Transaction({'consignmentid':'cabcdefh','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+              transactions1.push(new Transaction({'consignmentid':'cabcdefi','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
               
               const block1 = new Block({"previousHash":originBlock.id,"transactions":transactions1,"index":1})
 
               const transactions2 = [
                 
               ]
-              transactions2.push(new Transaction({'consignmentid':'cabcdefj','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
-              transactions2.push(new Transaction({'consignmentid':'cabcdefg','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
-              transactions2.push(new Transaction({'consignmentid':'cabcdefl','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+              transactions2.push(new Transaction({'consignmentid':'cabcdefj','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+              transactions2.push(new Transaction({'consignmentid':'cabcdefg','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+              transactions2.push(new Transaction({'consignmentid':'cabcdefl','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
               
               const block2 = new Block({"previousHash":block1.id,"transactions":transactions2, "index": 2})
 
               const transactions3 = [
                 
               ]
-              transactions3.push(new Transaction({'consignmentid':'cabcdefm','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
-              transactions3.push(new Transaction({'consignmentid':'cabcdefg','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
-              transactions3.push(new Transaction({'consignmentid':'cabcdefg','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+              transactions3.push(new Transaction({'consignmentid':'cabcdefm','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+              transactions3.push(new Transaction({'consignmentid':'cabcdefg','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+              transactions3.push(new Transaction({'consignmentid':'cabcdefg','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
               
               const block3 = new Block({"previousHash":block2.id,"transactions":transactions3,"index": 3})
 

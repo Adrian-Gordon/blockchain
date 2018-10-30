@@ -19,13 +19,16 @@ nconf.defaults(
   "publickeyurl":"./peer4/public.pem",
   "dbpath":"./peer4/data/",
   "defaulttpthreshold": 5000,
-  "defaultminingcountdown":1000,
+  "defaultminingcountdown":10000,
+  "minimumminingcountdown":1000,
   "miningcountdownprocesspath":"../../P2P/peer/miningCountdownProcess.js",
   "discoveryserverurl":"127.0.0.1",
   "discoveryserverport":3000,
   "discoveryservermessageport":3001,
   "port":3008,
-  "webserverport":3009
+  "webserverport":3009,
+   "listentime":100,
+  "monitortransactiontime": 500
 }
   )
 
@@ -60,6 +63,7 @@ describe('end to end tests', () => {
     request('http://localhost:3003')
           .post('/transactions')
           .send({'consignmentid':'consignment1',
+            'transactiontype':'despatched',
             'data':{"some":"arbitrary","json":"data"},
             'datatype':'application/json'
           })
@@ -67,34 +71,38 @@ describe('end to end tests', () => {
           .set('Accept','aplication/json')
           .expect(201)
           .then((res) => {
-            request('http://localhost:3003')
-            .get('/transactions')
-            .set('Accept', 'application/json')
-            .expect('Content-Type', /json/)
-            .expect(200)
-            .then(res => {
-              expect(res.body.length).to.eql(1)
-              request('http://localhost:3005')
-              .get('/transactions')
-              .set('Accept', 'application/json')
-              .expect('Content-Type', /json/)
-              .expect(200)
-              .then(res => {
-                expect(res.body.length).to.eql(1)
-                request('http://localhost:3007')
+            setTimeout(() => {
+                request('http://localhost:3003')
                 .get('/transactions')
                 .set('Accept', 'application/json')
                 .expect('Content-Type', /json/)
                 .expect(200)
                 .then(res => {
-                  expect(res.body.length).to.eql(1)
-                  done()
+                  expect(res.body.transactions.length).to.eql(1)
+                  request('http://localhost:3005')
+                  .get('/transactions')
+                  .set('Accept', 'application/json')
+                  .expect('Content-Type', /json/)
+                  .expect(200)
+                  .then(res => {
+                    expect(res.body.transactions.length).to.eql(1)
+                    request('http://localhost:3007')
+                    .get('/transactions')
+                    .set('Accept', 'application/json')
+                    .expect('Content-Type', /json/)
+                    .expect(200)
+                    .then(res => {
+                      expect(res.body.transactions.length).to.eql(1)
+                      done()
+                      
+                    })
+                    
+                  })
                   
                 })
-                
-              })
-              
-            })
+
+            },500)
+            
             
           })
           .catch((error) =>{
@@ -109,6 +117,7 @@ describe('end to end tests', () => {
       request('http://localhost:3003')        //add three transactions
           .post('/transactions')
           .send({'consignmentid':'consignment2',
+            'transactiontype':'despatched',
             'data':{"some":"arbitrary","json":"data"},
             'datatype':'application/json'
             })
@@ -118,6 +127,7 @@ describe('end to end tests', () => {
             request('http://localhost:3003')        //add three transactions
             .post('/transactions')
             .send({'consignmentid':'consignment3',
+               'transactiontype':'despatched',
               'data':{"somemore":"arbitrary","json":"data"},
               'datatype':'application/json'
               })
@@ -127,6 +137,7 @@ describe('end to end tests', () => {
               request('http://localhost:3003')        //add three transactions
               .post('/transactions')
               .send({'consignmentid':'consignment4',
+                 'transactiontype':'despatched',
                 'data':{"evenmore":"arbitrary","json":"data"},
                 'datatype':'application/json'
                 })
@@ -149,7 +160,7 @@ describe('end to end tests', () => {
                     .expect('Content-Type', /json/)
                     .expect(200)
                     .then(res => {
-                      expect(res.body.length).to.eql(2)
+                      expect(res.body.transactions.length).to.eql(2)
                       request('http://localhost:3005')
                       .get('/blocks')
                       .set('Accept', 'application/json')
@@ -163,7 +174,7 @@ describe('end to end tests', () => {
                         .expect('Content-Type', /json/)
                         .expect(200)
                         .then(res => {
-                          expect(res.body.length).to.eql(2)
+                          expect(res.body.transactions.length).to.eql(2)
                           request('http://localhost:3007')
                           .get('/blocks')
                           .set('Accept', 'application/json')
@@ -177,7 +188,7 @@ describe('end to end tests', () => {
                             .expect('Content-Type', /json/)
                             .expect(200)
                             .then(res => {
-                              expect(res.body.length).to.eql(2)
+                              expect(res.body.transactions.length).to.eql(2)
                               done()
                             })
                           })
@@ -186,7 +197,7 @@ describe('end to end tests', () => {
                     })
                   })
 
-                },1500)
+                },5000)
                  
 
               })
@@ -194,7 +205,7 @@ describe('end to end tests', () => {
           })
 
    })
-   it("should request the blockchain from peer4, since peer4 will be out of sync with the blockchain", (done) => {
+   it("peer4 should request the blockchain, since it will be out of sync with the blockchain", (done) => {
       peer4 = new Peer(nconf.get("discoveryserverurl"), nconf.get("discoveryserverport"), nconf.get("discoveryservermessageport"),nconf.get("port"), new Repository(Levelupdb))
       
   let originBlock = null
@@ -222,13 +233,14 @@ describe('end to end tests', () => {
       })
       .then(() => {
         peer4.startWebServer(nconf.get("webserverport")).then(() => {
-          peer4.listen()
+          peer4.listen(nconf.get("listentime"))
 
         //  setTimeout(() => {
                //peer4 adds a transaction
               request(peer4.webServer)        
               .post('/transactions')
               .send({'consignmentid':'consignment5',
+                 'transactiontype':'despatched',
                 'data':{"evensomemore":"arbitrary","json":"data"},
                 'datatype':'application/json'
                 })
@@ -250,7 +262,7 @@ describe('end to end tests', () => {
                     .expect('Content-Type', /json/)
                     .expect(200)
                     .then(res => {
-                      expect(res.body.length).to.eql(1)
+                      expect(res.body.transactions.length).to.eql(1)
                       request('http://localhost:3005')
                       .get('/blocks')
                       .set('Accept', 'application/json')
@@ -264,7 +276,7 @@ describe('end to end tests', () => {
                         .expect('Content-Type', /json/)
                         .expect(200)
                         .then(res => {
-                          expect(res.body.length).to.eql(1)
+                          expect(res.body.transactions.length).to.eql(1)
                           request('http://localhost:3007')
                           .get('/blocks')
                           .set('Accept', 'application/json')
@@ -278,7 +290,7 @@ describe('end to end tests', () => {
                             .expect('Content-Type', /json/)
                             .expect(200)
                             .then(res => {
-                              expect(res.body.length).to.eql(1)
+                              expect(res.body.transactions.length).to.eql(1)
                               request('http://localhost:3009')
                               .get('/blocks')
                               .set('Accept', 'application/json')
@@ -292,7 +304,7 @@ describe('end to end tests', () => {
                                 .expect('Content-Type', /json/)
                                 .expect(200)
                                 .then(res => {
-                                  expect(res.body.length).to.eql(0)
+                                  expect(res.body.transactions.length).to.eql(0)
                                   peer4.webServer.close()
                                   peer4.stopListening()
                                   peer4.topology.destroy()
@@ -306,7 +318,7 @@ describe('end to end tests', () => {
                       })
                     })
                   })
-                },1500)
+                },5000)
                })
          // },1500)
 

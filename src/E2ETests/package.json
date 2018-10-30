@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "runPeer.js",
   "scripts": {
-    "test": "mocha -R spec --reporter-options toConsole=true *.spec.js"
+    "test": "mocha -R spec --reporter-options toConsole=true --timeout 200000 *.spec.js"
   },
   "author": "",
   "license": "ISC",

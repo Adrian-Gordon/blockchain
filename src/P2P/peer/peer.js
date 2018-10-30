@@ -18,6 +18,11 @@ const nconf = require('../../config/conf.js').nconf
 const validStates = ["running","awaitingblockchain","mining"]
 
 
+process.on('unhandledRejection', (reason, p) => {
+  console.log("unhandled rejection at: ", p, "reason", reason.stack)
+})
+
+
 class Peer {
   constructor(discoveryServerUrl, discoveryServerPort,discoveryServerMessagePort, port, repository){
 
@@ -66,6 +71,7 @@ class Peer {
 
     this.webServer = null
     this.listenInterval = null
+    this.monitorTransactionPoolInterval = null
 
   }
 
@@ -254,6 +260,7 @@ class Peer {
             this.blockchain.hash = Blockchain.createHash(this.blockchain)
             this.repository.addBlockchain(this.blockchain)
             .then(()=> {
+  
               const transToIndexAndDelete = JSON.parse(block.transactions) //deserialise the transactions
 
               const indexPromises = transToIndexAndDelete.map(t => {
@@ -262,9 +269,17 @@ class Peer {
 
               Promise.all(indexPromises)
               .then(() => {
+            
                 this.removeTransactions(transToIndexAndDelete.map(t => {return JSON.parse(t).id}))
                 .then(() => {
-                   resolve(block)
+                 
+                  this.getRepositoryTransactionPoolSize()
+                  .then(size => {
+                   
+                    this.setTransactionPoolSize(size)
+                    resolve(block)
+                  })
+                   
                 })
               })
 
@@ -272,11 +287,19 @@ class Peer {
               
              
             })
+            .catch(error => {
+              logger.error(error)
+              reject(error)
+            })
             
           }
           else{
             reject(result)
           }
+        })
+        .catch(error => {
+          logger.error(error)
+          reject(error)
         })
       }
       
@@ -340,9 +363,9 @@ class Peer {
           this.setTransactionPoolSize(this.getTransactionPoolSize() + transaction.getSize())
           //kick off mining process, if transaction tkes us over threhold size
           //logger.info("poolsize: " + this.getTransactionPoolSize() + " threshold: " + this.getTransactionPoolThreshold())
-          if((this.getTransactionPoolSize() > this.getTransactionPoolThreshold())&& (this.getState()=="running")){
-            this.startMiningCountdownProcess(this.minimumMiningCountdown,this.miningCountdown)
-          }
+         // if((this.getTransactionPoolSize() > this.getTransactionPoolThreshold())&& (this.getState()=="running")){
+         //   this.startMiningCountdownProcess(this.minimumMiningCountdown,this.miningCountdown)
+         // }
           resolve(transaction)
         }
         else{
@@ -373,6 +396,7 @@ class Peer {
         }).reduce((a,b) => a + b, 0))
       })
       .catch(error => {
+        logger.error(error)
         reject(error)
       })
     })
@@ -469,6 +493,11 @@ class Peer {
   }
 
   listen(time){
+    logger.info("listen")
+    if(typeof time == 'undefined'){
+      logger.error("'listen must be called with a time argument'")
+      throw(new Error('listen must be called with a time argument'))
+    }
     this.listenInterval = setInterval(() =>{
       let message = this.popMessage()
       if(message){
@@ -481,111 +510,147 @@ class Peer {
   }
 
   stopListening(){
+     logger.info("stop listening")
     clearInterval(this.listenInterval)
   }
 
+
+monitorTransactionPool(time){
+    logger.info("monitorTransactionPool")
+    if(typeof time == 'undefined'){
+      logger.error("'monitorTransactionPool must be called with a time argument'")
+      throw(new Error('monitorTransactionPool must be called with a time argument'))
+    }
+    this.monitorTransactionPoolInterval = setInterval(() =>{
+      if(this.getState() == "running"){
+       if((this.getTransactionPoolSize() > this.getTransactionPoolThreshold())&& (this.getState()=="running")){
+        this.startMiningCountdownProcess(this.minimumMiningCountdown,this.miningCountdown)
+      }
+      }
+    }, time)
+  }
+
+  stopMonitoringTransactions(){
+    clearInterval(this.monitorTransactionPoolInterval)
+  }
+
+
+
   processReceivedMessage(message){
-    let indexCalls = []
+    logger.info("message received: " + message.action + " from: " + message.peer + " state: "+ this.getState())
     return new Promise((resolve, reject) => {
       if(this.getState() == "awaitingblockchain"){
         if(message.action !== 'blocks'){
           resolve(false)
         }
         else{
-          this.setState("running")
-          this.repository.deleteCollection("blocks")
-          .then(() => {
-            return this.repository.deleteCollection("consignmentindex")
-          })
-          .then(() => {
-            return this.repository.createCollection("blocks")
-          })
-          .then(()=> {
-            return this.repository.createCollection("consignmentindex")
-          }) 
-          .then(() => {
-              const dataArr = JSON.parse(message.data)
-             
-              let latestBlockIndex = -1
-              let latestBlockid = null
+          this.stopListening() //don't process any more messages until the blockchain has been received
+          logger.info("blocks message received")
+         //build an array of blocks from the provided string
+         let isValid = true
+         const dataArr = JSON.parse(message.data) 
+         const blocksArray = []
+         for(let i = 0; i < dataArr.length; i++){
+          const blockStr = dataArr[i]
+            try{
+                const block = Block.deserialize(blockStr)
+                blocksArray.push(block)
+            }catch(error){
+              logger.error(error)
+              //resolve(false)
+              isValid = false;
+              break
+            }
+         }  //It's a valid blockchain, so replace the esxisting one
+         if(!isValid){
+          resolve(false)
+         }
+         else{
 
-             // let consignmentids = []
+         
+            let indexCalls = []
+           this.repository.deleteCollection("blocks")         //delete existing data, and recreate the collections
+            .then(() => {
+              return this.repository.deleteCollection("consignmentindex")
+            })
+            .then(() => {
+              return this.repository.createCollection("blocks")
+            })
+            .then(()=> {
+              return this.repository.createCollection("consignmentindex")
+            }) 
+            .then(() => {
+                let latestBlockIndex = -1
+                let latestBlockid = null
+                const addBlockPromises = blocksArray.map(block => {
+                   if(block.index > latestBlockIndex){
+                      latestBlockIndex = block.index
+                      latestBlockid = block.id
+                    }
+                     if(block.transactions.length > 0){
 
-             
-
-              const addBlockPromises = dataArr.map(blockStr => {
-                try{
-                  const block = Block.deserialize(blockStr)
-                  if(block.index > latestBlockIndex){
-                    latestBlockIndex = block.index
-                    latestBlockid = block.id
-                  }
-
-                  if(block.transactions.length > 0){
-
-                    const transToDelete = JSON.parse(block.transactions) //deserialise the transactions
+                      const transToDelete = JSON.parse(block.transactions) //deserialise the transactions
+                      
+                      const transactionIds = transToDelete.map(t => {
+                        indexCalls.push({'block':block,'consignmentid': JSON.parse(t).consignmentid}) 
                     
-                    const transactionIds = transToDelete.map(t => {
-                      indexCalls.push({'block':block,'consignmentid': JSON.parse(t).consignmentid}) 
-                  
-                      //consignmentids.push(t.consignmentid)
-                      return JSON.parse(t).id
-                    })
+                        //consignmentids.push(t.consignmentid)
+                        return JSON.parse(t).id
+                      })
 
-        
-                    this.removeTransactions(transactionIds) //remove any of this block transactions from the transaction pool
-                  }
-                  //index the block
-
-
-                  return(this.repository.addBlock(block)) //add directly to the repository - they could be in any order
-
-                }catch(error){
-                  logger.error(error)
-                  return Promise.reject(error)
-                }
-                
-              })
-             
-            
-              
-
-                this.blockchain.setLatestBlockId(latestBlockid)
-                this.blockchain.setLatestBlockIndex(latestBlockIndex)
-                this.blockchain.setLength(addBlockPromises.length)
-                this.blockchain.setHash(Blockchain.createHash(this.blockchain))
-
-                
-                
-                  Promise.all(addBlockPromises)
-                  .then(() => {
-                    this.repository.addBlockchain(this.blockchain)
-                    .then(() => {
-                       this.syncIndexBlocks(indexCalls)
+          
+                      this.removeTransactions(transactionIds) //remove any of this block transactions from the transaction pool
                       .then(() => {
-                        resolve(true)
+                        this.getRepositoryTransactionPoolSize() //set the transaction pool size
+                        .then(size => {
+                        this.setTransactionPoolSize(size)
+                        
+                        })
+                        .catch(error => {
+                          logger.error(error)
+                        })
+                      })
+                      .catch(error => {
+                        logger.error(error)
+                      })
+                      
+                    }
+                    return(this.repository.addBlock(block)) //add directly to the repository - they could be in any order
+                })
+
+                  Promise.all(addBlockPromises)
+                    .then(() => {               //everything has suceeded
+                      this.setState("running")
+                      if(typeof nconf.get("listentime") !== 'undefined'){
+                        this.listen(nconf.get("listentime"))
+                      }
+                       //update the blockchain
+                      this.blockchain.setLatestBlockId(latestBlockid)
+                      this.blockchain.setLatestBlockIndex(latestBlockIndex)
+                      this.blockchain.setLength(addBlockPromises.length)
+                      this.blockchain.setHash(Blockchain.createHash(this.blockchain))
+                      this.repository.addBlockchain(this.blockchain)
+                      .then(() => {
+                         this.syncIndexBlocks(indexCalls)
+                        .then(() => {
+                          resolve(true)
+                        })
+                      })
+                      .catch(error => {
+                        logger.error(error)
+                        resolve(false)
                       })
                     })
                     .catch(error => {
                       logger.error(error)
                       resolve(false)
                     })
-                  })
-                  .catch(error => {
-                    logger.error(error)
-                    resolve(false)
-                  })
-              
-              
-              
-             
-              
-              
-           })
-           .catch(error => {
-            logger.error(error)
-            resolve(false)
-           })
+
+               
+
+            })
+        }
+
 
         }
  
@@ -642,6 +707,7 @@ class Peer {
                 })
                 .catch((error) => {
                   if(error == "block index greater than next index"){
+                    
                     this.setState("awaitingblockchain")
                     this.broadcastMessage("sendblocks")
                     reject(error)
@@ -685,6 +751,8 @@ class Peer {
     })
   }
 
+ 
+
   async syncIndexBlocks(indexCalls){    //synchronously index the blocks
 
     for(let i=0 ;i< indexCalls.length;i++){
@@ -704,6 +772,8 @@ class Peer {
   }
 
   sendMessage(peer, action, data, type){ + type
+
+    logger.info("sendMessage " + action + " to " + peer)
    
     if(typeof type == 'undefined') type = 'private'
     const socket = this.connectedPeers[peer]
@@ -739,7 +809,7 @@ class Peer {
         
       })
       .catch(error => {
-        console.log(error)
+        logger.error(error)
         reject(error)
       })
      
@@ -776,9 +846,11 @@ class Peer {
 
    
     this.setState("mining")
+   
 
     const countdown = minimumtimeout + Math.floor(Math.random() * timeout)
     // console.log("startMiningCountdownProcess " + countdown)
+    logger.info("start mining countdown process " + countdown)
 
     this.miningCountdownProcess = fork(nconf.get("miningcountdownprocesspath"),['' + countdown])
 
@@ -790,6 +862,7 @@ class Peer {
     return new Promise((resolve,reject) => {
       //console.log(`child exited with code ${code}`)
       if(code == 100){ //success
+        logger.info("mining countdown process success")
         this.miningCountdownProcess = null
         this.gatherTransactions(this.transactionPoolThreshold)
         .then((transactions) => {
@@ -798,6 +871,7 @@ class Peer {
             this.setState("running")
            // logger.info("miningCountdownSuccessCallback success")
           //  logger.info(JSON.stringify(newBlock))
+           
             resolve(newBlock)
           })
           
@@ -805,6 +879,7 @@ class Peer {
         
       }
       if(code == 200){ //failure - has been pre-empted
+        logger.info("mining countdown process preempted")
         this.setState("running")
         this.miningCountdownProcess = null
         //logger.info("miningCountdownSuccessCallback pre-empted")
