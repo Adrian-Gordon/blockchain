@@ -4,7 +4,7 @@
   "privatekeyurl":"peer4/private.pem",
   "publickeyurl":"peer4/public.pem",
   "dbpath":"peer4/data/",
-  "defaulttpthreshold": 5000,
+  "defaulttpthreshold": 50000,
   "defaultminingcountdown":10000,
   "minimumminingcountdown":1000,
   "miningcountdownprocesspath":"../src/P2P/peer/miningCountdownProcess.js",

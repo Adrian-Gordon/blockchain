@@ -1,4 +1,5 @@
 {
   "port":3000,
-  "messageport":3001
+  "messageport":3001,
+  "statsrefreshtime":1000
 }

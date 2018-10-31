@@ -14,5 +14,6 @@
   "port":3002,
   "webserverport":3003,
   "listentime":100,
-  "monitortransactiontime": 500
+  "monitortransactiontime": 500,
+  "reportstats":true
 }

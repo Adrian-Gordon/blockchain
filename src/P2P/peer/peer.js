@@ -91,6 +91,22 @@ class Peer {
 
   setTransactionPoolSize(size){
     this.transactionPoolSize = size
+    if(nconf.get("reportstats")){
+          const url = "http://" + this.discoveryServerUrl + ":" + this.discoveryServerPort + "/tpoollength"
+
+          request({
+            "uri": url,
+            "method":"POST",
+            "json":{
+              "port":this.port,
+              "length":size
+            }
+          })
+          .catch(error => {
+            logger.error(error)
+          })
+            
+        }
     return(size)
   }
 
@@ -257,6 +273,22 @@ class Peer {
             this.blockchain.setLatestBlockId(block.id)
             this.blockchain.setLatestBlockIndex(block.index)
             this.blockchain.incrementLength()
+            if(nconf.get("reportstats")){
+              const url = "http://" + this.discoveryServerUrl + ":" + this.discoveryServerPort + "/bclength"
+
+              request({
+                "uri": url,
+                "method":"POST",
+                "json":{
+                  "port":this.port,
+                  "length":this.blockchain.getLength()
+                }
+              })
+              .catch(error => {
+                logger.error(error)
+              })
+                
+            }
             this.blockchain.hash = Blockchain.createHash(this.blockchain)
             this.repository.addBlockchain(this.blockchain)
             .then(()=> {
@@ -501,6 +533,21 @@ class Peer {
     this.listenInterval = setInterval(() =>{
       let message = this.popMessage()
       if(message){
+         if(nconf.get("reportstats")){
+          const url = "http://" + this.discoveryServerUrl + ":" + this.discoveryServerPort + "/messagein"
+
+          request({
+            "uri": url,
+            "method":"POST",
+            "json":{
+              "port":this.port
+            }
+          })
+          .catch(error => {
+            logger.error(error)
+          })
+            
+        }
         this.processReceivedMessage(message)
         .catch(err => {
           logger.error(err)
@@ -771,7 +818,7 @@ monitorTransactionPool(time){
 
   }
 
-  sendMessage(peer, action, data, type){ + type
+  sendMessage(peer, action, data, type){
 
     logger.info("sendMessage " + action + " to " + peer)
    
@@ -781,6 +828,22 @@ monitorTransactionPool(time){
     if(!socket)throw new Error("no connection to peer: '" + peer+ "'")
 
     socket.write({'action': action, 'data': data, 'type': type})
+
+    if(nconf.get("reportstats")){
+      const url = "http://" + this.discoveryServerUrl + ":" + this.discoveryServerPort + "/messageout"
+
+      request({
+        "uri": url,
+        "method":"POST",
+        "json":{
+          "port":this.port
+        }
+      })
+      .catch(error => {
+        logger.error(error)
+      })
+        
+    }
 
   }
 

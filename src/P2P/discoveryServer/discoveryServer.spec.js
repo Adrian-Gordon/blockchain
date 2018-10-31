@@ -257,6 +257,163 @@ describe('Discovery Server', () => {
     })
 
   })
+
+
+  it("gets the stats of all peers", (done) => {
+    const peer = new Peer("127.0.0.1",3000, 3001,3002, new Repository(Levelupdb))
+     peer.registerAsPeer().then(() => {
+      peer.setupPeerNetwork(3002)
+      .then(()=> { 
+         request(app)
+          .get('/stats')
+          .expect(200)
+          .then(response => {
+            should.exist(response.body["127.0.0.1"]["3002"])
+            response.body["127.0.0.1"]["3002"]["bclength"].should.eql(0)
+           peer.topology.destroy()
+            done()
+
+            })
+
+      })
+     })
+
+  })
+
+ 
+ it("increments the messagesin count of a peer", (done) => {
+    const peer = new Peer("127.0.0.1",3000, 3001,3002, new Repository(Levelupdb))
+     peer.registerAsPeer().then(() => {
+      peer.setupPeerNetwork(3002)
+      .then(()=> { 
+         request(app)
+        .post('/messagein')
+        .send({
+          'port': 3002
+        })
+        .set('Content-Type','application/json')
+        .set('Accept','aplication/json')
+        .expect(201)
+        .then((res) => {
+          res.body.count.should.eql(1)
+
+          request(app)
+          .get('/stats')
+          .expect(200)
+          .then(response => {
+            should.exist(response.body["127.0.0.1"]["3002"])
+            response.body["127.0.0.1"]["3002"]["messagesin"].should.eql(1)
+            peer.topology.destroy()
+            done()
+
+            })
+        })
+        
+      })
+     })
+
+  })
+
+ it("increments the messagesout count of a peer", (done) => {
+    const peer = new Peer("127.0.0.1",3000, 3001,3002, new Repository(Levelupdb))
+     peer.registerAsPeer().then(() => {
+      peer.setupPeerNetwork(3002)
+      .then(()=> { 
+         request(app)
+        .post('/messageout')
+        .send({
+          'port': 3002
+        })
+        .set('Content-Type','application/json')
+        .set('Accept','aplication/json')
+        .expect(201)
+        .then((res) => {
+          res.body.count.should.eql(1)
+
+          request(app)
+          .get('/stats')
+          .expect(200)
+          .then(response => {
+            should.exist(response.body["127.0.0.1"]["3002"])
+            response.body["127.0.0.1"]["3002"]["messagesout"].should.eql(1)
+            peer.topology.destroy()
+            done()
+
+            })
+        })
+        
+      })
+     })
+
+  })
+
+  it("sets the bclength property of a peer", (done) => {
+    const peer = new Peer("127.0.0.1",3000, 3001,3002, new Repository(Levelupdb))
+     peer.registerAsPeer().then(() => {
+      peer.setupPeerNetwork(3002)
+      .then(()=> { 
+         request(app)
+        .post('/bclength')
+        .send({
+          'port': 3002,
+          'length': 10
+        })
+        .set('Content-Type','application/json')
+        .set('Accept','aplication/json')
+        .expect(201)
+        .then((res) => {
+          res.body.length.should.eql(10)
+
+          request(app)
+          .get('/stats')
+          .expect(200)
+          .then(response => {
+            should.exist(response.body["127.0.0.1"]["3002"])
+            response.body["127.0.0.1"]["3002"]["bclength"].should.eql(10)
+            peer.topology.destroy()
+            done()
+
+            })
+        })
+        
+      })
+     })
+
+  })
+
+   it("sets the tpoollength property of a peer", (done) => {
+    const peer = new Peer("127.0.0.1",3000, 3001,3002, new Repository(Levelupdb))
+     peer.registerAsPeer().then(() => {
+      peer.setupPeerNetwork(3002)
+      .then(()=> { 
+         request(app)
+        .post('/tpoollength')
+        .send({
+          'port': 3002,
+          'length': 10
+        })
+        .set('Content-Type','application/json')
+        .set('Accept','aplication/json')
+        .expect(201)
+        .then((res) => {
+          res.body.length.should.eql(10)
+
+          request(app)
+          .get('/stats')
+          .expect(200)
+          .then(response => {
+            should.exist(response.body["127.0.0.1"]["3002"])
+            response.body["127.0.0.1"]["3002"]["tpoollength"].should.eql(10)
+            peer.topology.destroy()
+            done()
+
+            })
+        })
+        
+      })
+     })
+
+  })
           
 
   

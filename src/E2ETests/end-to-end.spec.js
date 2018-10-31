@@ -28,7 +28,8 @@ nconf.defaults(
   "port":3008,
   "webserverport":3009,
    "listentime":100,
-  "monitortransactiontime": 500
+  "monitortransactiontime": 500,
+  "reportstats":true
 }
   )
 
