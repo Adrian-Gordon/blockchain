@@ -12,6 +12,8 @@ const topology = require('fully-connected-topology')
 
 const jsonStream = require('duplex-json-stream')
 
+const cors = require('cors')
+
 
 
 let app = null
@@ -33,6 +35,8 @@ const startServer = (port1, port2) => {
     } 
 
     app = express()
+
+    app.use(cors())
 
     app.use(bodyParser.json())
 
