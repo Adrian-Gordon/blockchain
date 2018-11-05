@@ -6,3 +6,4 @@ const server = require('../../src/P2P/discoveryServer/discoveryServer')
 
 
 server.startServer(nconf.get("port"), nconf.get("messageport"))
+server.startStatsResetTask(nconf.get("statsrefreshtime"))
