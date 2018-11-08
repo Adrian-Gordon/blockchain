@@ -24,7 +24,7 @@ process.on('unhandledRejection', (reason, p) => {
 
 
 class Peer {
-  constructor(discoveryServerUrl, discoveryServerPort,discoveryServerMessagePort, port, repository){
+  constructor(discoveryServerUrl, discoveryServerPort,discoveryServerMessagePort, port, webport, repository){
 
     if(typeof discoveryServerUrl == 'undefined'){
       throw new Error("no discovery server URL provided")
@@ -47,6 +47,12 @@ class Peer {
     if(isNaN(parseInt(port))){
       throw new Error("invalid peer port: '" + port + "'")
     }
+    if(typeof webport == 'undefined'){
+      throw new Error("no peer port provided")
+    }
+    if(isNaN(parseInt(webport))){
+      throw new Error("invalid peer port: '" + port + "'")
+    }
 
     if(typeof repository == 'undefined'){
       throw new Error("no repository provided")
@@ -57,6 +63,7 @@ class Peer {
     this.discoveryServerMessagePort = parseInt(discoveryServerMessagePort)
 
     this.port = port
+    this.webport = webport
     this.startTime = new Date().getTime()
     this.repository = repository
     this.messageQueue = []
@@ -225,7 +232,8 @@ class Peer {
         uri: addPeerUrl,
         method: 'POST',
         json: {
-          port: this.port
+          port: this.port,
+          'webport':this.webport
         }
       }
 
@@ -437,35 +445,38 @@ class Peer {
   }
 
   setupPeerNetwork(port){
-    //console.log("setupPeerNetwork " + port)
+   
     return new Promise((resolve, reject) => {
 
+       
 
         //this.topology = topology("127.0.0.1:" + this.port, peers)
         //this.topology.on('connection', this.connectionCallback)
         const peer = this
         this.getPeers()
         .then((peers) => {
+         
           //iterate over ip addresses
           Object.keys(peers).forEach(ip => {
             
             const ports = peers[ip]
            
-            let peersRefs = ports.map(port => {
-              if(ip !== this.ip || port != this.port){
+            let peersRefs = ports.map(twoports => {
+              if(ip !== this.ip || twoports.port != this.port){
                 if(ip.substr(0,7)=="::ffff:")
-                  return(ip.substr(7) + ":" + port)
+                  return(ip.substr(7) + ":" + twoports.port)
               else
-                  return(ip + ":" + port)
+                  return(ip + ":" + twoports.port)
               }
             }).filter(value => {
                return typeof value !== 'undefined'
             })
+            
             peersRefs.push(this.discoveryServerUrl + ":" + this.discoveryServerMessagePort) //push the discovery server as peer
+            
             peer.topology = topology("127.0.0.1:" + this.port, peersRefs)
             peer.topology.on('connection', this.connectionCallback.bind(this))
-            //console.log(peer.topology)
-            //console.log(this)
+           
             resolve(true)
           })
           
@@ -492,11 +503,11 @@ class Peer {
       }
     })
     socket.on('end', () => {
-      //console.log(this.port + "disconnected from" + peer)
+     
       delete this.connectedPeers[peer]
     })
     this.connectedPeers[peer] = socket
-    //console.log(this.port + " connected to " + peer)
+   
     return(true)
     
   }
@@ -912,7 +923,7 @@ monitorTransactionPool(time){
    
 
     const countdown = minimumtimeout + Math.floor(Math.random() * timeout)
-    // console.log("startMiningCountdownProcess " + countdown)
+    
     logger.info("start mining countdown process " + countdown)
 
     this.miningCountdownProcess = fork(nconf.get("miningcountdownprocesspath"),['' + countdown])
@@ -921,9 +932,9 @@ monitorTransactionPool(time){
   }
 
   miningCountdownSuccessCallback(code){
-   // console.log("miningCountdownSuccessCallback")
+   
     return new Promise((resolve,reject) => {
-      //console.log(`child exited with code ${code}`)
+     
       if(code == 100){ //success
         logger.info("mining countdown process success")
         this.miningCountdownProcess = null
@@ -956,6 +967,7 @@ monitorTransactionPool(time){
   //WEBSERVER
 
   startWebServer(port){
+    console.log("startwebserver " + port)
     return new Promise((resolve, reject) => {
       webServer.startServer(this, port)
       .then(server => {

@@ -42,11 +42,12 @@ const startServer = (port1, port2) => {
 
     app.get('/activeNodes', (req, res, next) => {
       let returnedObj = {}
-
       Object.keys(app.activeNodes).forEach(key => {
+       
         let ips = []
         Object.keys(app.activeNodes[key]).forEach(port => {
-          ips.push(port)
+          
+          ips.push({'port':parseInt(port),'webport':app.activeNodes[key][port]['webport']})
         })
 
         /*let ips = app.activeNodes[key].map(obj => {
@@ -54,15 +55,19 @@ const startServer = (port1, port2) => {
         })*/
         returnedObj[key] = ips
       })
+     
+    
       res.status(status.OK).send(returnedObj)
     })
 
    
 
     app.post('/activeNodes', (req, res, next) => {
+     
       let port = req.body.port
+      let webport = req.body.webport
       let ip = req.ip
-
+     
       if(ip.indexOf(':') !== -1){ //if it's an ip v6 
         ip = ip.split(':')[3]
       }
@@ -73,6 +78,12 @@ const startServer = (port1, port2) => {
       else if(isNaN(parseInt(port))){
         res.status(status.BAD_REQUEST).send()
       }
+       if(typeof webport == 'undefined'){
+        res.status(status.BAD_REQUEST).send()
+      }
+      else if(isNaN(parseInt(webport))){
+        res.status(status.BAD_REQUEST).send()
+      }
       else{
         const addResult = swarm.add(ip + ":" + port)
         let socket = swarm.peer(ip + ":" + port)
@@ -80,14 +91,14 @@ const startServer = (port1, port2) => {
         
         if(typeof app.activeNodes[ip] == 'undefined'){
           app.activeNodes[ip]={}
-          app.activeNodes[ip][port] = {"socket":socket,"stats":{"bclength":0,"tpoollength":0,"messagesin":0,"messagesout":0}}
+          app.activeNodes[ip][port] = {"webport":webport,"socket":socket,"stats":{"bclength":0,"tpoollength":0,"messagesin":0,"messagesout":0}}
         }
         else{
 
-          app.activeNodes[ip][port] = {"socket":socket,"stats":{"bclength":0,"tpoollength":0,"messagesin":0,"messagesout":0}}
+          app.activeNodes[ip][port] = {"webport":webport,"socket":socket,"stats":{"bclength":0,"tpoollength":0,"messagesin":0,"messagesout":0}}
           
         }
-      
+        
         res.status(status.CREATED).send({"ip": ip, "port":port})
       }
       
@@ -295,17 +306,16 @@ const connectionCallback = (connection, peer) => {
       const port = peer.substring(index+1,peer.length)
       
       deleteFromActiveNodes(ip, port)
-     // console.log("discovery server disconnects from " + peer)
-     
+    
     })
 
-    //console.log("discovery server connected to " + peer)
+  
 
     const index = peer.indexOf(':')
     const ip = peer.substring(0,index)
     const port = parseInt(peer.substring(index+1,peer.length))
 
-    if(typeof app.activeNodes[ip] == 'undefined'){
+  /*  if(typeof app.activeNodes[ip] == 'undefined'){
           app.activeNodes[ip]={}
           app.activeNodes[ip][port] = {"socket":socket,"stats":{"bclength":0,"tpoollength":0,"messagesin":0,"messagesout":0}}
     }
@@ -313,7 +323,7 @@ const connectionCallback = (connection, peer) => {
 
           app.activeNodes[ip][port] = {"socket":socket,"stats":{"bclength":0,"tpoollength":0,"messagesin":0,"messagesout":0}}
          
-    }
+    }*/
 
    
     return(true)
@@ -321,8 +331,7 @@ const connectionCallback = (connection, peer) => {
   }
 
   const onDataCallback = (data) => {
-    //console.log("discovery Server message in: " + data)
-
+  
   }
 
   const getSwarm = () => {

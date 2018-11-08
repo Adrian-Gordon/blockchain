@@ -51,7 +51,7 @@ describe('end to end tests', () => {
             .expect('Content-Type', /json/)
             .expect(200)
             .then(res => {
-              expect(res.body["127.0.0.1"]).to.include.members(['3002','3004','3006'])
+              expect(res.body["127.0.0.1"].length).to.eql(3)
               done()
             })
           },1000)
@@ -207,7 +207,7 @@ describe('end to end tests', () => {
 
    })
    it("peer4 should request the blockchain, since it will be out of sync with the blockchain", (done) => {
-      peer4 = new Peer(nconf.get("discoveryserverurl"), nconf.get("discoveryserverport"), nconf.get("discoveryservermessageport"),nconf.get("port"), new Repository(Levelupdb))
+      peer4 = new Peer(nconf.get("discoveryserverurl"), nconf.get("discoveryserverport"), nconf.get("discoveryservermessageport"),nconf.get("port"), nconf.get("webserverport"),new Repository(Levelupdb))
       
   let originBlock = null
       peer4.deleteCollections()

@@ -59,11 +59,35 @@ describe('Discovery Server', () => {
     .expect(400, done)
   })
 
+  it('returns a bad request code when no webport is specified in a POST', (done) => {
+    request(app)
+    .post('/activeNodes')
+    .send({
+      'port':5000
+    })
+    .set('Content-Type','application/json')
+    .set('Accept','aplication/json')
+    .expect(400, done)
+  })
+
+  it('returns a bad request code when an invalid webport is specified in a POST', (done) => {
+    request(app)
+    .post('/activeNodes')
+    .send({
+      'port':500,
+      'webport':'aport'
+    })
+    .set('Content-Type','application/json')
+    .set('Accept','aplication/json')
+    .expect(400, done)
+  })
+
   it('can add a new P2P node', (done) => {
     request(app)
     .post('/activeNodes')
     .send({
-      'port': 5000
+      'port': 5000,
+      'webport':5001
     })
     .set('Content-Type','application/json')
     .set('Accept','aplication/json')
@@ -77,7 +101,8 @@ describe('Discovery Server', () => {
     request(app)
     .post('/activeNodes')
     .send({
-      'port': 5000
+      'port': 5000,
+      'webport':5001
     })
     .set('Content-Type','application/json')
     .set('Accept','aplication/json')
@@ -89,7 +114,8 @@ describe('Discovery Server', () => {
         .expect(200)
         .then(response => {
           
-          response.body["127.0.0.1"][0].should.eql('5000')
+          response.body["127.0.0.1"][0]['port'].should.eql(5000)
+           response.body["127.0.0.1"][0]['webport'].should.eql(5001)
           done()
 
           })
@@ -158,7 +184,8 @@ describe('Discovery Server', () => {
     request(app)
     .post('/activeNodes')
     .send({
-      'port': 5000
+      'port': 5000,
+      'webport':5001
     })
     .set('Content-Type','application/json')
     .set('Accept','aplication/json')
@@ -166,7 +193,8 @@ describe('Discovery Server', () => {
         request(app)
         .post('/activeNodes')
         .send({
-          'port': 6000
+          'port': 6000,
+          'webport':6001
         })
         .set('Content-Type','application/json')
         .set('Accept','aplication/json')
@@ -179,7 +207,6 @@ describe('Discovery Server', () => {
             .set('Content-Type','application/json')
             .set('Accept','aplication/json')
             .expect((res) => {
-              
               let r = res.body["127.0.0.1"]
               r.should.not.containEql(6000)
             })
@@ -195,7 +222,8 @@ describe('Discovery Server', () => {
     request(app)
     .post('/activeNodes')
     .send({
-      'port': 6000
+      'port': 6000,
+      'webport':6001
     })
     .set('Content-Type','application/json')
     .set('Accept','aplication/json')
@@ -217,13 +245,13 @@ describe('Discovery Server', () => {
   })
 
   it("removes a peer from active Nodes when it disconnects",(done) => {
-    const peer1 = new Peer("127.0.0.1",3000, 3001,3002, new Repository(Levelupdb))
-    const peer2 = new Peer("127.0.0.1",3000, 3001,3003, new Repository(Levelupdb))
+    const peer1 = new Peer("127.0.0.1",3000, 3001,3002, 3003, new Repository(Levelupdb))
+    const peer2 = new Peer("127.0.0.1",3000, 3001,3004,3005, new Repository(Levelupdb))
 
     peer1.registerAsPeer().then(() => {
 
       peer2.registerAsPeer().then(() => {
-        peer2.setupPeerNetwork(3003)
+        peer2.setupPeerNetwork(3004)
         .then(()=> {
          
             peer1.setupPeerNetwork(3002)
@@ -260,7 +288,7 @@ describe('Discovery Server', () => {
 
 
   it("gets the stats of all peers", (done) => {
-    const peer = new Peer("127.0.0.1",3000, 3001,3002, new Repository(Levelupdb))
+    const peer = new Peer("127.0.0.1",3000, 3001,3002,3003, new Repository(Levelupdb))
      peer.registerAsPeer().then(() => {
       peer.setupPeerNetwork(3002)
       .then(()=> { 
@@ -282,7 +310,7 @@ describe('Discovery Server', () => {
 
  
  it("increments the messagesin count of a peer", (done) => {
-    const peer = new Peer("127.0.0.1",3000, 3001,3002, new Repository(Levelupdb))
+    const peer = new Peer("127.0.0.1",3000, 3001,3002, 3003,new Repository(Levelupdb))
      peer.registerAsPeer().then(() => {
       peer.setupPeerNetwork(3002)
       .then(()=> { 
@@ -315,7 +343,7 @@ describe('Discovery Server', () => {
   })
 
  it("increments the messagesout count of a peer", (done) => {
-    const peer = new Peer("127.0.0.1",3000, 3001,3002, new Repository(Levelupdb))
+    const peer = new Peer("127.0.0.1",3000, 3001,3002,3003, new Repository(Levelupdb))
      peer.registerAsPeer().then(() => {
       peer.setupPeerNetwork(3002)
       .then(()=> { 
@@ -348,7 +376,7 @@ describe('Discovery Server', () => {
   })
 
   it("sets the bclength property of a peer", (done) => {
-    const peer = new Peer("127.0.0.1",3000, 3001,3002, new Repository(Levelupdb))
+    const peer = new Peer("127.0.0.1",3000, 3001,3002, 3003,new Repository(Levelupdb))
      peer.registerAsPeer().then(() => {
       peer.setupPeerNetwork(3002)
       .then(()=> { 
@@ -382,7 +410,7 @@ describe('Discovery Server', () => {
   })
 
    it("sets the tpoollength property of a peer", (done) => {
-    const peer = new Peer("127.0.0.1",3000, 3001,3002, new Repository(Levelupdb))
+    const peer = new Peer("127.0.0.1",3000, 3001,3002,3003, new Repository(Levelupdb))
      peer.registerAsPeer().then(() => {
       peer.setupPeerNetwork(3002)
       .then(()=> { 

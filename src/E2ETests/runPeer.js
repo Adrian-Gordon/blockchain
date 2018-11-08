@@ -12,7 +12,7 @@ const Blockchain = require('../blockchain/blockchain').Blockchain
 
 const Peer = require('../P2P/peer/peer').Peer
 
-const peer = new Peer(nconf.get("discoveryserverurl"), nconf.get("discoveryserverport"), nconf.get("discoveryservermessageport"),nconf.get("port"), new Repository(Levelupdb))
+const peer = new Peer(nconf.get("discoveryserverurl"), nconf.get("discoveryserverport"), nconf.get("discoveryservermessageport"),nconf.get("port"), nconf.get('webserverport'),new Repository(Levelupdb))
 
 
 let originBlock = null
@@ -40,7 +40,7 @@ peer.deleteCollections()
   return peer.setupPeerNetwork()
 })
 .then(() => {
-  peer.startWebServer(nconf.get("webserverport")).then(() => {
+  peer.startWebServer(peer.webport).then(() => {
     peer.listen(nconf.get("listentime"))
     peer.monitorTransactionPool(nconf.get("monitortransactiontime"))
   })
