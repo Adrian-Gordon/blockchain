@@ -12,7 +12,7 @@ const Blockchain = require('../src/blockchain/blockchain').Blockchain
 
 const Peer = require('../src/P2P/peer/peer').Peer
 
-const peer = new Peer(nconf.get("discoveryserverurl"), nconf.get("discoveryserverport"), nconf.get("discoveryservermessageport"),nconf.get("port"), new Repository(Levelupdb))
+const peer = new Peer(nconf.get("discoveryserverurl"), nconf.get("discoveryserverport"), nconf.get("discoveryservermessageport"),nconf.get("port"), nconf.get("webserverport"),new Repository(Levelupdb))
 
 
 let originBlock = null
