@@ -422,6 +422,19 @@ describe('Peer Connectivity', () => {
     })
   })
 
+  it("registers as a peer with ip", (done) => {
+    const peer = new Peer("127.0.0.1",3000, 3001,3002, 3003,new Repository(Levelupdb),'testip')
+    peer.registerAsPeer().then((result) => {
+      result.ip.should.eql('testip')
+      result.port.should.eql(3002)
+      done()
+    })
+    .catch((error) => {
+      expect(error).to.be.null
+      done()
+    })
+  })
+
   it("returns a peer's status", (done) => {
     const peer = new Peer("127.0.0.1",3000, 3001,3002, 3003,new Repository(Levelupdb))
 
@@ -470,7 +483,7 @@ describe('Peer Connectivity', () => {
     
   })
 
-  it("closes a peer connection",(done) => {
+/*  it("closes a peer connection",(done) => {
     const peer1 = new Peer("127.0.0.1",3000, 3001,3002, 3003,new Repository(Levelupdb))
     const peer2 = new Peer("127.0.0.1",3000, 3001,3004, 3005, new Repository(Levelupdb))
 
@@ -694,7 +707,7 @@ describe('Peer Connectivity', () => {
     })
 
 
-  })
+  })*/
 
   
 })
@@ -2337,11 +2350,12 @@ describe("webserver", () => {
   })
 
   it("starts the webserver", (done) => {
-     const peer = new Peer("127.0.0.1",3000, 3001,3002,3003, new Repository(Levelupdb))
+     let peer = new Peer("127.0.0.1",3000, 3001,3002,3003, new Repository(Levelupdb))
 
      peer.startWebServer(3003,peer).then(() => {
       expect(peer.webServer).to.not.eql(null)
       peer.webServer.close()
+       peer=null
       done()
      })
 
@@ -2349,7 +2363,7 @@ describe("webserver", () => {
 
    it('can post a new transaction', (done) => {
 
-     const peer = new Peer("127.0.0.1",3000, 3001,3002, 3003,new Repository(Levelupdb))
+     let peer = new Peer("127.0.0.1",3000, 3001,3002, 3003,new Repository(Levelupdb))
      peer.createCollections()
      .then(() => {
 
@@ -2371,6 +2385,7 @@ describe("webserver", () => {
               expect(trans.id).to.eql(res.body.id) //it is in the transaction pool
               peer.deleteCollections().then(() => {
                  peer.webServer.close()
+                  peer=null
                 done()
               })
               
@@ -2386,7 +2401,7 @@ describe("webserver", () => {
 
    it('returns a BAD REQUEST error when trying to post an invalid  transaction', (done) => {
 
-     const peer = new Peer("127.0.0.1",3000, 3001,3002,3003, new Repository(Levelupdb))
+     let peer = new Peer("127.0.0.1",3000, 3001,3002,3003, new Repository(Levelupdb))
      peer.createCollections()
      .then(() => {
 
@@ -2401,6 +2416,7 @@ describe("webserver", () => {
           .then(res => {
             peer.deleteCollections().then(() => {
                  peer.webServer.close()
+                  peer=null
                 done()
               })
           })
@@ -2413,7 +2429,7 @@ describe("webserver", () => {
   })
   it('returns all transactions', (done) => {
 
-     const peer = new Peer("127.0.0.1",3000, 3001,3002,3003, new Repository(Levelupdb))
+     let peer = new Peer("127.0.0.1",3000, 3001,3002,3003, new Repository(Levelupdb))
      peer.deleteCollections()
      .then(() => {
 
@@ -2446,6 +2462,7 @@ describe("webserver", () => {
                 expect(res.body.transactions.length).to.be.eql(3)
                 peer.deleteCollections().then(() => {
                      peer.webServer.close()
+                      peer=null
                     done()
                   })
               })
@@ -2460,7 +2477,7 @@ describe("webserver", () => {
   })
 
   it("returns all blocks", (done) => {
-     const peer = new Peer("127.0.0.1",3000, 3001,3002,3003, new Repository(Levelupdb))
+     let peer = new Peer("127.0.0.1",3000, 3001,3002,3003, new Repository(Levelupdb))
      peer.deleteCollections()
      .then(() => {
 
@@ -2511,6 +2528,7 @@ describe("webserver", () => {
                 expect(res.body.length).to.be.eql(3)
                 peer.deleteCollections().then(() => {
                      peer.webServer.close()
+                      peer=null
                     done()
                   })
               })
@@ -2527,7 +2545,7 @@ describe("webserver", () => {
   })
 
   it("returns a blockchain", (done) => {
-     const peer = new Peer("127.0.0.1",3000, 3001,3002, 3003,new Repository(Levelupdb))
+     let peer = new Peer("127.0.0.1",3000, 3001,3002, 3003,new Repository(Levelupdb))
      peer.deleteCollections()
      .then(() => {
 
@@ -2548,6 +2566,7 @@ describe("webserver", () => {
                 expect(res.body.id).to.eql('blockchain')
                 peer.deleteCollections().then(() => {
                      peer.webServer.close()
+                      peer=null
                     done()
                   })
               })
@@ -2563,7 +2582,7 @@ describe("webserver", () => {
   })
 
   it("returns a consignment", (done) => {
-     const peer = new Peer("127.0.0.1",3000, 3001,3002, 3003,new Repository(Levelupdb))
+     let peer = new Peer("127.0.0.1",3000, 3001,3002, 3003,new Repository(Levelupdb))
      peer.deleteCollections()
      .then(() => {
 
@@ -2631,8 +2650,103 @@ describe("webserver", () => {
                         expect(res.body.length).to.eql(4)
                         peer.deleteCollections().then(() => {
                              peer.webServer.close()
+                             peer=null
                             done()
                           })
+                      })
+                    
+
+                    })
+
+
+              })
+                
+                
+
+              })
+             
+          })
+         
+        })
+
+        
+
+       
+     })
+    
+
+  })
+it("adds crossedborder transactions", (done) => {
+     const peer = new Peer("127.0.0.1",3000, 3001,3002, 3003,new Repository(Levelupdb))
+     peer.deleteCollections()
+     .then(() => {
+
+       peer.createCollections().then(() => {
+
+          //add an origin block
+        const originBlock = new Block({"previousHash": "-1", "transactions":[],"index":0})
+        //save to the database
+        peer.repository.addBlock(originBlock).then(result => {
+          //set up the blockchain object
+          const blockchain = new Blockchain({"latestblockid": originBlock.id, "latestblockindex": originBlock.index, "length":1})
+          peer.setBlockchain(blockchain)
+          .then(() => {
+              const transactions1 = [
+        
+              ]
+              transactions1.push(new Transaction({'consignmentid':'cabcdefg','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+              transactions1.push(new Transaction({'consignmentid':'cabcdefh','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+              transactions1.push(new Transaction({'consignmentid':'cabcdefi','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+              
+              const block1 = new Block({"previousHash":originBlock.id,"transactions":transactions1,"index":1})
+
+              const transactions2 = [
+                
+              ]
+              transactions2.push(new Transaction({'consignmentid':'cabcdefj','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+              transactions2.push(new Transaction({'consignmentid':'cabcdefg','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+              transactions2.push(new Transaction({'consignmentid':'cabcdefl','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+              
+              const block2 = new Block({"previousHash":block1.id,"transactions":transactions2, "index": 2})
+
+              const transactions3 = [
+                
+              ]
+              transactions3.push(new Transaction({'consignmentid':'cabcdefm','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+              transactions3.push(new Transaction({'consignmentid':'cabcdefg','transactiontype':'despatched','data':{"some":"arbitrary","json":"data"},'datatype':'application/json',"publickey":publicKey}))
+              transactions3.push(new Transaction({'consignmentid':'cabcdefg','transactiontype':'waybill','data':{"inventory":["cb1","cb2","cb3"]},'datatype':'application/json',"publickey":publicKey}))
+         
+              const block3 = new Block({"previousHash":block2.id,"transactions":transactions3,"index": 3})
+
+          
+              peer.addBlock(block1)
+              .then(() => {
+                return peer.addBlock(block2)
+              })
+              .then(()=> {
+                return peer.addBlock(block3)
+              })
+              .then(() => {   
+                    peer.startWebServer(3003).then(() => {
+                      request(peer.webServer)
+                      .post('/crossborder/cabcdefg')
+                      .send()
+                      .set('Content-Type','application/json')
+                      .set('Accept','aplication/json')
+                      .expect(201)
+                      .then(res => {
+                       
+                        peer.repository.getAllTransactions()
+                        .then(transactions => {
+
+                          expect(transactions.length).to.eql(3)
+                          peer.deleteCollections().then(() => {
+                             peer.webServer.close()
+
+                            done()
+                          })
+                        })
+                        
                       })
                     
 

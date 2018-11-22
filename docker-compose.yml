@@ -1,0 +1,81 @@
+version: '2'
+
+services:
+  discovery:
+    image: discoveryserver
+    container_name: discovery_container
+    environment:
+        - port=3000
+        - messageport=3001
+        - statsrefreshtime=1000
+    ports:
+        - "3000:3000"
+        - "3001:3001"
+    networks:
+      main:
+        aliases:
+          - discovery
+  peer1:
+    image: bcpeer
+    container_name: peer1_container
+    environment:
+      - ip=peer1
+      - hashalgorithm=SHA256
+      - signatureformat=hex
+      - privatekeyurl=private.pem 
+      - publickeyurl=public.pem 
+      - dbpath=data/ 
+      - defaulttpthreshold=50000 
+      - defaultminingcountdown=10000 
+      - minimumminingcountdown=1000 
+      - miningcountdownprocesspath=/usr/src/app/src/P2P/peer/miningCountdownProcess.js 
+      - discoveryserverurl=discovery 
+      - discoveryserverport=3000 
+      - discoveryservermessageport=3001 
+      - port=3002 
+      - webserverport=3003 
+      - listentime=100 
+      - monitortransactiontime=500 
+      - reportstats=true
+    ports:
+      - "3002:3002"
+      - "3003:3003"
+    networks:
+      main:
+        aliases:
+          - peer1
+
+  peer2:
+    image: bcpeer
+    container_name: peer2_container
+    environment:
+      - ip=peer2
+      - hashalgorithm=SHA256
+      - signatureformat=hex
+      - privatekeyurl=private.pem 
+      - publickeyurl=public.pem 
+      - dbpath=data/ 
+      - defaulttpthreshold=50000 
+      - defaultminingcountdown=10000 
+      - minimumminingcountdown=1000 
+      - miningcountdownprocesspath=../src/P2P/peer/miningCountdownProcess.js 
+      - discoveryserverurl=discovery 
+      - discoveryserverport=3000 
+      - discoveryservermessageport=3001 
+      - port=3004
+      - webserverport=3005 
+      - listentime=100 
+      - monitortransactiontime=500 
+      - reportstats=true
+    ports:
+      - "3004:3004"
+      - "3005:3005"
+    networks:
+      main:
+        aliases:
+          - peer2
+
+networks:
+  main:
+
+      

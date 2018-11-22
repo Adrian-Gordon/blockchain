@@ -4,7 +4,7 @@
   "description": "",
   "main": "peer.js",
   "scripts": {
-    "test": "mocha -R spec --reporter-options toConsole=true *.spec.js --conf=testconfig.json"
+    "test": "mocha -R spec --reporter-options toConsole=true *.spec.js  --conf=testconfig.json"
   },
   "author": "",
   "license": "ISC",
@@ -17,6 +17,7 @@
     "supertest": "^3.3.0"
   },
   "dependencies": {
+    "cors": "^2.8.5",
     "duplex-json-stream": "^1.0.1",
     "express": "^4.16.3",
     "fully-connected-topology": "^1.1.1",

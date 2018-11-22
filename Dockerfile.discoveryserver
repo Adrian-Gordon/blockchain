@@ -1,0 +1,31 @@
+FROM node:8
+
+ARG VERSION=1.0.0
+
+WORKDIR /usr/src/app
+
+COPY demo demo/.
+
+COPY src src/.
+
+RUN cd /usr/src/app/src/block && npm install
+
+RUN cd /usr/src/app/src/blockchain && npm install
+
+RUN cd /usr/src/app/src/database/leveldb && npm install
+
+RUN cd /usr/src/app/src/message && npm install
+
+RUN cd /usr/src/app/src/P2P/discoveryServer && npm install
+
+RUN cd /usr/src/app/src/repository && npm install
+
+RUN cd /usr/src/app/src/transaction && npm install
+
+RUN cd /usr/src/app/demo/discoveryServer && npm install
+
+EXPOSE 3000 3001
+
+CMD cd /usr/src/app/demo/discoveryServer && node runDiscoveryServer.js
+
+

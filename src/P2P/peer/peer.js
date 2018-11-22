@@ -24,7 +24,7 @@ process.on('unhandledRejection', (reason, p) => {
 
 
 class Peer {
-  constructor(discoveryServerUrl, discoveryServerPort,discoveryServerMessagePort, port, webport, repository){
+  constructor(discoveryServerUrl, discoveryServerPort,discoveryServerMessagePort, port, webport, repository, thisip){
 
     if(typeof discoveryServerUrl == 'undefined'){
       throw new Error("no discovery server URL provided")
@@ -79,6 +79,7 @@ class Peer {
     this.webServer = null
     this.listenInterval = null
     this.monitorTransactionPoolInterval = null
+    this.ip = thisip
 
   }
 
@@ -106,11 +107,12 @@ class Peer {
             "method":"POST",
             "json":{
               "port":this.port,
-              "length":size
+              "length":size,
+              "ip":this.ip
             }
           })
           .catch(error => {
-            logger.error(error)
+            logger.error(error + url)
           })
             
         }
@@ -233,8 +235,13 @@ class Peer {
         method: 'POST',
         json: {
           port: this.port,
-          'webport':this.webport
+          webport:this.webport
+          
         }
+      }
+
+      if(typeof this.ip !== 'undefined'){
+        options.json.ip = this.ip
       }
 
       request(options)
@@ -289,7 +296,8 @@ class Peer {
                 "method":"POST",
                 "json":{
                   "port":this.port,
-                  "length":this.blockchain.getLength()
+                  "length":this.blockchain.getLength(),
+                  "ip":this.ip
                 }
               })
               .catch(error => {
@@ -455,8 +463,9 @@ class Peer {
         const peer = this
         this.getPeers()
         .then((peers) => {
-         
+       
           //iterate over ip addresses
+          let allPeersRefs = []
           Object.keys(peers).forEach(ip => {
             
             const ports = peers[ip]
@@ -472,13 +481,22 @@ class Peer {
                return typeof value !== 'undefined'
             })
             
-            peersRefs.push(this.discoveryServerUrl + ":" + this.discoveryServerMessagePort) //push the discovery server as peer
             
-            peer.topology = topology("127.0.0.1:" + this.port, peersRefs)
-            peer.topology.on('connection', this.connectionCallback.bind(this))
+            allPeersRefs = allPeersRefs.concat(peersRefs)
+              
            
-            resolve(true)
+            
           })
+
+          allPeersRefs.push(this.discoveryServerUrl + ":" + this.discoveryServerMessagePort) //push the discovery server as peer
+
+          logger.info(allPeersRefs)
+          peer.topology = topology("127.0.0.1:" + this.port, allPeersRefs)
+              
+            
+          peer.topology.on('connection', this.connectionCallback.bind(this))
+
+          resolve(true)
           
 
         })
@@ -507,6 +525,10 @@ class Peer {
       delete this.connectedPeers[peer]
     })
     this.connectedPeers[peer] = socket
+    
+  //  Object.keys(this.connectedPeers).forEach((peer) => {
+   //   logger.info(peer)
+  //  })
    
     return(true)
     
@@ -551,7 +573,8 @@ class Peer {
             "uri": url,
             "method":"POST",
             "json":{
-              "port":this.port
+              "port":this.port,
+              "ip":this.ip
             }
           })
           .catch(error => {
@@ -847,7 +870,8 @@ monitorTransactionPool(time){
         "uri": url,
         "method":"POST",
         "json":{
-          "port":this.port
+          "port":this.port,
+          "ip":this.ip
         }
       })
       .catch(error => {
@@ -922,7 +946,7 @@ monitorTransactionPool(time){
     this.setState("mining")
    
 
-    const countdown = minimumtimeout + Math.floor(Math.random() * timeout)
+    const countdown = parseInt(minimumtimeout) + Math.floor(Math.random() * parseInt(timeout))
     
     logger.info("start mining countdown process " + countdown)
 

@@ -16,6 +16,8 @@ const Transaction = require('../../transaction/transaction').Transaction
 
 const Message = require('../../message/message').Message
 
+const cors = require('cors')
+
 
 
 let expressApp = null
@@ -23,6 +25,7 @@ let expressApp = null
 const startServer = (peer, port) => {
   return new Promise((resolve, reject) => {
     expressApp = express()
+    expressApp.use(cors())
     expressApp.peer = peer
 
     expressApp.use(bodyParser.json())
@@ -49,6 +52,102 @@ const startServer = (peer, port) => {
 
 
         })
+
+
+      }catch(error){
+        res.status(status.BAD_REQUEST).send(error)
+      }
+        
+      
+    })
+     expressApp.post('/crossborder/:consignmentid', (req, res, next) => {
+      try{
+        
+          const consignmentid = req.params.consignmentid
+             expressApp.peer.repository.getConsignmentIndex(consignmentid)
+            .then(index => {
+              const blockids = index.blockids
+              const blockPromises = blockids.map(bid => {
+                return peer.repository.getBlock(bid)
+              })
+              Promise.all(blockPromises)
+              .then(blocks => {
+                let allGoodTransactions = []
+                blocks.forEach(block =>{
+                  
+                  const transactions = JSON.parse(block.transactions)
+
+                  const goodTransactions = transactions.filter(t => {
+                    //console.log("t: " + t)
+                    const t1 = JSON.parse(t)
+                   
+                    if((t1.consignmentid == consignmentid)&&(t1.transactiontype=="waybill")) return true
+                    return false
+                  })
+                 
+                  allGoodTransactions = allGoodTransactions.concat(goodTransactions)
+                  
+                })
+
+                if(allGoodTransactions.length > 0){
+
+                  const trans = JSON.parse(allGoodTransactions[0])
+
+                  const consignmentids = JSON.parse(trans.data).inventory
+
+                 
+
+                  const cbPromises = consignmentids.map(c => {
+                      let trans ={
+                        "consignmentid":c,
+                        "transactiontype":"crossedborder",
+                        "data":{},
+                        "datatype":"application/json",
+                        "publickey":publicKey
+
+                      }
+
+                      
+                     
+
+                      const transaction = new Transaction(trans)
+
+                      return expressApp.peer.addTransaction(transaction) 
+                  })
+
+                  Promise.all(cbPromises)
+                  .then(transactions => {
+                    transactions.forEach(trans => { //broadcast new transactions to peers
+                      const tStr = trans.serialize()
+
+                      expressApp.peer.broadcastMessage('addtransaction',tStr)
+                    })
+                    res.status(status.CREATED).send(allGoodTransactions.map(t => JSON.parse(t)))
+                  })
+                  .catch(error => {
+                    res.status(status.BAD_REQUEST).send(error)
+                  })
+
+                
+                  
+
+                }
+                else{
+                   res.status(status.BAD_REQUEST).send("no waybill transaction found")
+                }
+
+                
+              })
+              .catch(error => {
+                console.log(error)
+                res.status(status.BAD_REQUEST).send(error)
+              })
+              
+            })
+            .catch(error => {
+              console.log(error)
+              res.status(status.BAD_REQUEST).send(error)
+            })
 
 
       }catch(error){

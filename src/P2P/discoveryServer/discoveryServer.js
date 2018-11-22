@@ -6,7 +6,7 @@ const status = require('http-status')
 
 const bodyParser = require('body-parser')
 
-const logger = require('../../logger/logger.js').logger
+const logger = require('../../logger/logger.js')(module)
 
 const topology = require('fully-connected-topology')
 
@@ -23,7 +23,7 @@ let app = null
  var swarm = null
 
 const startServer = (port1, port2) => {
-  swarm =topology("127.0.0.1:" + port2)
+  swarm =topology( port2)
   swarm.on('connection', connectionCallback)
   return new Promise((resolve, reject) => {
     if(!port1) {
@@ -66,11 +66,16 @@ const startServer = (port1, port2) => {
      
       let port = req.body.port
       let webport = req.body.webport
-      let ip = req.ip
+      let ip = req.body.ip
+      console.log(req.ip + " " + req.body.ip)
+      if(typeof ip == 'undefined') 
+        ip = req.ip
      
       if(ip.indexOf(':') !== -1){ //if it's an ip v6 
         ip = ip.split(':')[3]
       }
+
+      
       
       if(typeof port == 'undefined'){
         res.status(status.BAD_REQUEST).send()
@@ -85,21 +90,27 @@ const startServer = (port1, port2) => {
         res.status(status.BAD_REQUEST).send()
       }
       else{
-        const addResult = swarm.add(ip + ":" + port)
-        let socket = swarm.peer(ip + ":" + port)
-        
-        
-        if(typeof app.activeNodes[ip] == 'undefined'){
-          app.activeNodes[ip]={}
-          app.activeNodes[ip][port] = {"webport":webport,"socket":socket,"stats":{"bclength":0,"tpoollength":0,"messagesin":0,"messagesout":0}}
-        }
-        else{
-
-          app.activeNodes[ip][port] = {"webport":webport,"socket":socket,"stats":{"bclength":0,"tpoollength":0,"messagesin":0,"messagesout":0}}
+        try{
+          const addResult = swarm.add(ip + ":" + port)
+         
+          let socket = swarm.peer(ip + ":" + port)
           
-        }
         
-        res.status(status.CREATED).send({"ip": ip, "port":port})
+          if(typeof app.activeNodes[ip] == 'undefined'){
+            app.activeNodes[ip]={}
+            app.activeNodes[ip][port] = {"webport":webport,"socket":socket,"stats":{"bclength":0,"tpoollength":0,"messagesin":0,"messagesout":0}}
+          }
+          else{
+
+            app.activeNodes[ip][port] = {"webport":webport,"socket":socket,"stats":{"bclength":0,"tpoollength":0,"messagesin":0,"messagesout":0}}
+            
+          }
+          
+          res.status(status.CREATED).send({"ip": ip, "port":port})
+        }catch(error){
+          console.log("ERROR: " + error)
+        }
+
       }
       
     })
@@ -154,6 +165,7 @@ const startServer = (port1, port2) => {
         let ips = {}
         Object.keys(app.activeNodes[key]).forEach(port => {
           ips[port] = app.activeNodes[key][port].stats
+          ips[port]["webport"] = app.activeNodes[key][port].webport
         })
 
         /*let ips = app.activeNodes[key].map(obj => {
@@ -167,7 +179,9 @@ const startServer = (port1, port2) => {
 
      app.post('/messagein', (req, res, next) => {
       let port = req.body.port
-      let ip = req.ip
+      let ip = req.body.ip
+      
+      if(typeof ip == 'undefined') ip = req.ip
 
       if(ip.indexOf(':') !== -1){ //if it's an ip v6 
         ip = ip.split(':')[3]
@@ -194,7 +208,9 @@ const startServer = (port1, port2) => {
 
      app.post('/messageout', (req, res, next) => {
       let port = req.body.port
-      let ip = req.ip
+      let ip = req.body.ip
+      
+      if(typeof ip == 'undefined') ip = req.ip
 
       if(ip.indexOf(':') !== -1){ //if it's an ip v6 
         ip = ip.split(':')[3]
@@ -222,7 +238,9 @@ const startServer = (port1, port2) => {
     app.post('/bclength', (req, res, next) => {
       let port = req.body.port
       let length = req.body.length
-      let ip = req.ip
+      let ip = req.body.ip
+      
+      if(typeof ip == 'undefined') ip = req.ip
 
       if(ip.indexOf(':') !== -1){ //if it's an ip v6 
         ip = ip.split(':')[3]
@@ -250,7 +268,14 @@ const startServer = (port1, port2) => {
     app.post('/tpoollength', (req, res, next) => {
       let port = req.body.port
       let length = req.body.length
-      let ip = req.ip
+      let ip = req.body.ip
+
+      logger.info(req.body.ip + " " + req.ip )
+      logger.info(JSON.stringify(app.activeNodes))
+      
+      if(typeof ip == 'undefined') ip = req.ip
+      
+
 
       if(ip.indexOf(':') !== -1){ //if it's an ip v6 
         ip = ip.split(':')[3]
@@ -288,9 +313,9 @@ const startServer = (port1, port2) => {
 }
 
 const deleteFromActiveNodes = (ip, port) => {
-  if(typeof app.activeNodes[ip][port] !== 'undefined')
+  if(typeof app.activeNodes[ip] !== 'undefined' && typeof app.activeNodes[ip][port] !== 'undefined')
     delete app.activeNodes[ip][port]
-  if(Object.keys(app.activeNodes[ip]).length == 0){
+  if(typeof app.activeNodes[ip] !== 'undefined' && Object.keys(app.activeNodes[ip]).length == 0){
     delete app.activeNodes[ip]
   }
 
@@ -305,7 +330,7 @@ const connectionCallback = (connection, peer) => {
       const ip = peer.substring(0,index)
       const port = peer.substring(index+1,peer.length)
       
-      deleteFromActiveNodes(ip, port)
+      //deleteFromActiveNodes(ip, port)
     
     })
 
