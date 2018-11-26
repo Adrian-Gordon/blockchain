@@ -75,6 +75,96 @@ services:
         aliases:
           - peer2
 
+  peer3:
+    image: bcpeer
+    container_name: peer3_container
+    environment:
+      - ip=peer3
+      - hashalgorithm=SHA256
+      - signatureformat=hex
+      - privatekeyurl=private.pem 
+      - publickeyurl=public.pem 
+      - dbpath=data/ 
+      - defaulttpthreshold=50000 
+      - defaultminingcountdown=10000 
+      - minimumminingcountdown=1000 
+      - miningcountdownprocesspath=../src/P2P/peer/miningCountdownProcess.js 
+      - discoveryserverurl=discovery 
+      - discoveryserverport=3000 
+      - discoveryservermessageport=3001 
+      - port=3006
+      - webserverport=3007 
+      - listentime=100 
+      - monitortransactiontime=500 
+      - reportstats=true
+    ports:
+      - "3006:3006"
+      - "3007:3007"
+    networks:
+      main:
+        aliases:
+          - peer3
+
+  peer4:
+    image: bcpeer
+    container_name: peer4_container
+    environment:
+      - ip=peer4
+      - hashalgorithm=SHA256
+      - signatureformat=hex
+      - privatekeyurl=private.pem 
+      - publickeyurl=public.pem 
+      - dbpath=data/ 
+      - defaulttpthreshold=50000 
+      - defaultminingcountdown=10000 
+      - minimumminingcountdown=1000 
+      - miningcountdownprocesspath=../src/P2P/peer/miningCountdownProcess.js 
+      - discoveryserverurl=discovery 
+      - discoveryserverport=3000 
+      - discoveryservermessageport=3001 
+      - port=3008
+      - webserverport=3009 
+      - listentime=100 
+      - monitortransactiontime=500 
+      - reportstats=true
+    ports:
+      - "3008:3008"
+      - "3009:3009"
+    networks:
+      main:
+        aliases:
+          - peer4
+
+  peer5:
+    image: bcpeer
+    container_name: peer5_container
+    environment:
+      - ip=peer5
+      - hashalgorithm=SHA256
+      - signatureformat=hex
+      - privatekeyurl=private.pem 
+      - publickeyurl=public.pem 
+      - dbpath=data/ 
+      - defaulttpthreshold=50000 
+      - defaultminingcountdown=10000 
+      - minimumminingcountdown=1000 
+      - miningcountdownprocesspath=../src/P2P/peer/miningCountdownProcess.js 
+      - discoveryserverurl=discovery 
+      - discoveryserverport=3000 
+      - discoveryservermessageport=3001 
+      - port=3010
+      - webserverport=3011 
+      - listentime=100 
+      - monitortransactiontime=500 
+      - reportstats=true
+    ports:
+      - "3010:3010"
+      - "3011:3011"
+    networks:
+      main:
+        aliases:
+          - peer5
+
 networks:
   main:
 
